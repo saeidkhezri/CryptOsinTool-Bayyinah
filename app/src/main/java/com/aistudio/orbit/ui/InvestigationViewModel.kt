@@ -148,6 +148,13 @@ class InvestigationViewModel(application: Application) : AndroidViewModel(applic
 
     private val _activeCase = MutableStateFlow<InvestigationCase?>(null)
     val activeCase: StateFlow<InvestigationCase?> = _activeCase.asStateFlow()
+
+    private val _experienceMode = MutableStateFlow(com.aistudio.orbit.model.ExperienceMode.GUIDED_INVESTIGATION)
+    val experienceMode: StateFlow<com.aistudio.orbit.model.ExperienceMode> = _experienceMode.asStateFlow()
+
+    fun setExperienceMode(mode: com.aistudio.orbit.model.ExperienceMode) {
+        _experienceMode.value = mode
+    }
     val allCases: StateFlow<List<InvestigationCase>> = investigationRepo.cases
         .stateIn(
             scope = viewModelScope,

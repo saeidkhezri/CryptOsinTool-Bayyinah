@@ -29,11 +29,9 @@ import com.aistudio.orbit.model.RiskSeverity
 import com.aistudio.orbit.ui.components.designsystem.*
 import com.aistudio.orbit.ui.theme.*
 
-enum class ExperienceMode(val displayNameFa: String, val displayNameEn: String) {
-    GUIDED_INVESTIGATION("بررسی هدایت‌شده", "Guided Investigation"),
-    ANALYST_WORKSPACE("محیط کارشناس", "Analyst Workspace"),
-    QUICK_CHECK("بررسی سریع", "Quick Check")
-}
+import com.aistudio.orbit.model.ExperienceMode
+import com.aistudio.orbit.model.InvestigationState
+import com.aistudio.orbit.model.InvestigationStateMachine
 
 enum class StageStatus(val displayNameFa: String, val displayNameEn: String, val color: Color) {
     COMPLETED("تکمیل شده", "Completed", Color(0xFF10B981)), // Emerald Green

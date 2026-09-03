@@ -4,6 +4,8 @@
 )
 package com.aistudio.orbit.ui.screens
 
+import com.aistudio.orbit.model.ExperienceMode
+
 import android.widget.Toast
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
@@ -79,25 +81,71 @@ fun InvestigationWorkspaceView(
     val deepCandidates = deepIdentityDossier?.phoneReconstruction?.topCandidates ?: emptyList()
     val osintSession by viewModel.osintSession.collectAsState()
 
-    var experienceMode by remember { mutableStateOf(ExperienceMode.GUIDED_INVESTIGATION) }
-    var currentStage by remember { mutableStateOf(InvestigationStage.BLOCKCHAIN_DISCOVERY) }
-    var stageStatuses by remember {
-        mutableStateOf(
-            mapOf(
-                InvestigationStage.START_CASE to StageStatus.COMPLETED,
-                InvestigationStage.INITIAL_LEAD to StageStatus.COMPLETED,
-                InvestigationStage.BLOCKCHAIN_DISCOVERY to StageStatus.CURRENT,
-                InvestigationStage.TRANSACTIONS_LEDGER to StageStatus.AVAILABLE,
-                InvestigationStage.RELATED_ADDRESSES to StageStatus.AVAILABLE,
-                InvestigationStage.PATTERN_ANALYSIS to StageStatus.AVAILABLE,
-                InvestigationStage.OSINT_REVIEW to StageStatus.AVAILABLE,
-                InvestigationStage.RISK_REVIEW to StageStatus.AVAILABLE,
-                InvestigationStage.EVIDENCE_REVIEW to StageStatus.AVAILABLE,
-                InvestigationStage.CONCLUSION to StageStatus.AVAILABLE,
-                InvestigationStage.REPORT to StageStatus.AVAILABLE
-            )
-        )
+    val experienceMode by viewModel.experienceMode.collectAsState()
+
+    var stageStatuses by remember(investigationCase, osintReport, deepCandidates) {
+        val hasTransactions = investigationCase.transactions.isNotEmpty()
+        val hasCounterparties = investigationCase.counterparties.isNotEmpty()
+        val hasPatterns = false // Future implementation
+        val hasOsint = osintReport != null
+        val hasRisks = investigationCase.riskIndicators.isNotEmpty()
+        val hasEvidence = investigationCase.evidenceLog.isNotEmpty()
+        val hasHypotheses = false // Future implementation
+
+        mutableStateOf(mapOf(
+            InvestigationStage.START_CASE to StageStatus.COMPLETED,
+            InvestigationStage.INITIAL_LEAD to StageStatus.COMPLETED,
+            InvestigationStage.BLOCKCHAIN_DISCOVERY to if (hasTransactions) StageStatus.COMPLETED else StageStatus.CURRENT,
+            InvestigationStage.TRANSACTIONS_LEDGER to when {
+                hasCounterparties -> StageStatus.COMPLETED
+                hasTransactions -> StageStatus.CURRENT
+                else -> StageStatus.LOCKED
+            },
+            InvestigationStage.RELATED_ADDRESSES to when {
+                hasPatterns -> StageStatus.COMPLETED
+                hasCounterparties -> StageStatus.CURRENT
+                hasTransactions -> StageStatus.AVAILABLE
+                else -> StageStatus.LOCKED
+            },
+            InvestigationStage.PATTERN_ANALYSIS to when {
+                hasOsint -> StageStatus.COMPLETED
+                hasPatterns -> StageStatus.CURRENT
+                hasCounterparties -> StageStatus.AVAILABLE
+                else -> StageStatus.LOCKED
+            },
+            InvestigationStage.OSINT_REVIEW to when {
+                hasRisks -> StageStatus.COMPLETED
+                hasOsint -> StageStatus.CURRENT
+                hasPatterns -> StageStatus.AVAILABLE
+                else -> StageStatus.LOCKED
+            },
+            InvestigationStage.RISK_REVIEW to when {
+                hasEvidence -> StageStatus.COMPLETED
+                hasRisks -> StageStatus.CURRENT
+                hasOsint -> StageStatus.AVAILABLE
+                else -> StageStatus.LOCKED
+            },
+            InvestigationStage.EVIDENCE_REVIEW to when {
+                hasHypotheses -> StageStatus.COMPLETED
+                hasEvidence -> StageStatus.CURRENT
+                hasRisks -> StageStatus.AVAILABLE
+                else -> StageStatus.LOCKED
+            },
+            InvestigationStage.CONCLUSION to when {
+                hasHypotheses -> StageStatus.CURRENT
+                hasEvidence -> StageStatus.AVAILABLE
+                else -> StageStatus.LOCKED
+            },
+            InvestigationStage.REPORT to when {
+                hasEvidence -> StageStatus.AVAILABLE
+                else -> StageStatus.LOCKED
+            }
+        ))
     }
+
+    val recommendedStage = stageStatuses.entries.firstOrNull { it.value == StageStatus.CURRENT }?.key ?: InvestigationStage.BLOCKCHAIN_DISCOVERY
+    var currentStage by remember(investigationCase.caseId) { mutableStateOf(recommendedStage) }
+
 
     var activeDomain by remember(investigationCase.caseId) { mutableStateOf(WorkspaceDomain.BLOCKCHAIN_ANALYTICS) }
     var activeBlockchainSubTab by remember(investigationCase.caseId) { mutableStateOf(BlockchainSubTab.OVERVIEW) }
@@ -180,6 +228,28 @@ fun InvestigationWorkspaceView(
             deepIdentityCandidates = deepCandidates,
             osintSession = osintSession
         )
+    }
+
+    if (experienceMode == com.aistudio.orbit.model.ExperienceMode.QUICK_CHECK) {
+        QuickCheckView(
+            viewModel = viewModel,
+            investigationCase = investigationCase,
+            isPersian = isFa,
+            onEscalateToGuided = { viewModel.setExperienceMode(com.aistudio.orbit.model.ExperienceMode.GUIDED_INVESTIGATION) },
+            onEscalateToAnalyst = { viewModel.setExperienceMode(com.aistudio.orbit.model.ExperienceMode.ANALYST_WORKSPACE) }
+        )
+        return
+    }
+
+    if (experienceMode == ExperienceMode.QUICK_CHECK) {
+        QuickCheckView(
+            viewModel = viewModel,
+            investigationCase = investigationCase,
+            isPersian = isFa,
+            onEscalateToGuided = { viewModel.setExperienceMode(ExperienceMode.GUIDED_INVESTIGATION) },
+            onEscalateToAnalyst = { viewModel.setExperienceMode(ExperienceMode.ANALYST_WORKSPACE) }
+        )
+        return
     }
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
@@ -321,7 +391,7 @@ fun InvestigationWorkspaceView(
                 // Collapsible Roadmap & Experience Mode Header
                 CollapsibleRoadmapHeader(
                     activeMode = experienceMode,
-                    onModeChange = { experienceMode = it },
+                    onModeChange = { viewModel.setExperienceMode(it) },
                     currentStage = currentStage,
                     stageStatuses = stageStatuses,
                     onStageSelect = { syncStageToDomain(it) },

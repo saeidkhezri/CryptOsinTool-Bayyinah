@@ -504,44 +504,88 @@ fun NewInvestigationView(
 
             // Action Buttons
             item {
-                Button(
-                    onClick = {
-                        viewModel.startNewInvestigation(
-                            referenceNumber = referenceNumber,
-                            caseTitle = caseTitle,
-                            targetAddress = targetAddress,
-                            network = selectedNetwork,
-                            scopeDescription = scopeDescription,
-                            notes = notes,
-                            tags = listOf("STAGE-2", selectedNetwork.name),
-                            searchDepth = searchDepth,
-                            queryLimit = queryLimit
-                        )
-                        onInvestigationStarted()
-                    },
-                    enabled = !isLoading && (validationResult?.isValid == true || targetAddress.isNotBlank()),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(52.dp),
-                    shape = RoundedCornerShape(12.dp)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    if (isLoading) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(20.dp),
-                            color = MaterialTheme.colorScheme.onPrimary,
-                            strokeWidth = 2.5.dp
-                        )
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Text(text = loadingMsg, fontSize = 14.sp)
-                    } else {
-                        Icon(Icons.Default.Search, contentDescription = null)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = if (isPersian) "شروع استعلام و جرم‌یابی دفترکل" else "Begin Ledger Forensic Investigation",
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Bold,
-                            textAlign = TextAlign.Center
-                        )
+                    Button(
+                        onClick = {
+                            viewModel.setExperienceMode(com.aistudio.orbit.model.ExperienceMode.QUICK_CHECK)
+                            viewModel.startNewInvestigation(
+                                referenceNumber = referenceNumber,
+                                caseTitle = caseTitle,
+                                targetAddress = targetAddress,
+                                network = selectedNetwork,
+                                scopeDescription = scopeDescription,
+                                notes = notes,
+                                tags = listOf("STAGE-2", selectedNetwork.name),
+                                searchDepth = searchDepth,
+                                queryLimit = queryLimit
+                            )
+                            onInvestigationStarted()
+                        },
+                        enabled = !isLoading && (validationResult?.isValid == true || targetAddress.isNotBlank()),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(52.dp),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        if (isLoading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                color = MaterialTheme.colorScheme.onPrimary,
+                                strokeWidth = 2.5.dp
+                            )
+                        } else {
+                            Text(
+                                text = if (isPersian) "بررسی سریع (Quick Check)" else "Quick Check",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
+
+                    Button(
+                        onClick = {
+                            viewModel.setExperienceMode(com.aistudio.orbit.model.ExperienceMode.GUIDED_INVESTIGATION)
+                            viewModel.startNewInvestigation(
+                                referenceNumber = referenceNumber,
+                                caseTitle = caseTitle,
+                                targetAddress = targetAddress,
+                                network = selectedNetwork,
+                                scopeDescription = scopeDescription,
+                                notes = notes,
+                                tags = listOf("STAGE-2", selectedNetwork.name),
+                                searchDepth = searchDepth,
+                                queryLimit = queryLimit
+                            )
+                            onInvestigationStarted()
+                        },
+                        enabled = !isLoading && (validationResult?.isValid == true || targetAddress.isNotBlank()),
+                        modifier = Modifier
+                            .weight(1.5f)
+                            .height(52.dp),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        if (isLoading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                color = MaterialTheme.colorScheme.onPrimary,
+                                strokeWidth = 2.5.dp
+                            )
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Text(text = loadingMsg, fontSize = 14.sp)
+                        } else {
+                            Icon(Icons.Default.Search, contentDescription = null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = if (isPersian) "پرونده هدایت‌شده" else "Guided Investigation",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                textAlign = TextAlign.Center
+                            )
+                        }
                     }
                 }
             }
