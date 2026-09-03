@@ -194,7 +194,46 @@ data class ForensicStrings(
     val copyAddress: String,
     val copiedToClipboard: String,
     val errorOccurred: String,
-    val disclaimerText: String
+    val disclaimerText: String,
+
+    // Core Navigator Questions (Prompt 2)
+    val questionWhereAmI: String = "من کجا هستم؟",
+    val questionWhatAmILookingAt: String = "به چه چیزی نگاه می‌کنم؟",
+    val questionWhatDoesThisMean: String = "این داده چه مفهومی دارد؟",
+    val questionWhatShouldIDoNext: String = "اقدام بعدی من چیست؟",
+
+    // Guided Investigation Structured Stage Elements
+    val stageObjective: String = "هدف این مرحله",
+    val requiredInputs: String = "ورودی‌های مورد نیاز",
+    val currentFindings: String = "یافته‌های فعلی",
+    val evidenceCollected: String = "ادله و مستندات گردآوری‌شده",
+    val whatThisMeans: String = "مفهوم و پیامد داده‌ها",
+    val recommendedNextAction: String = "اقدام پیشنهادی بعدی",
+    val alternativeActions: String = "اقدامات و شاخه‌های جایگزین",
+    val deadEndConditions: String = "شرایط بن‌بست و راهکار خروج",
+    val learnMoreConcept: String = "آموزش تخصصی مفهوم",
+
+    // Three Experience Modes
+    val modeGuidedTitle: String = "ردیابی هدایت‌شده",
+    val modeGuidedSubtitle: String = "مرحله‌به‌مرحله همراه با اعتبارسنجی، توصیه اقدام بعدی و آموزش مفاهیم",
+    val modeAnalystTitle: String = "محیط کارشناس",
+    val modeAnalystSubtitle: String = "دسترسی مستقیم به گراف، فیلترهای پیشرفته، جداول و ابزارهای عمیق ردیابی",
+    val modeQuickCheckTitle: String = "بررسی سریع سرنخ",
+    val modeQuickCheckSubtitle: String = "ارزیابی اولیه و سریع یک آدرس بدون ایجاد پرونده کامل",
+
+    // Quick Check 5-step Workflow
+    val quickStepInput: String = "۱. ورودی سرنخ",
+    val quickStepValidate: String = "۲. اعتبارسنجی",
+    val quickStepSummary: String = "۳. خلاصه فعالیت",
+    val quickStepSignals: String = "۴. شاخص‌های کلیدی",
+    val quickStepNextAction: String = "۵. اقدام بعدی و ارتقا",
+    val escalateToGuided: String = "ارتقا به پرونده هدایت‌شده",
+    val escalateToAnalyst: String = "بازگشایی در محیط کارشناس",
+    val leadAddressLabel: String = "آدرس سرنخ",
+    val keyRiskSignals: String = "شاخص‌های کلیدی ریسک",
+    val sanctionsCheckStatus: String = "وضعیت بررسی تحریم‌ها",
+    val attributionCandidates: String = "نامزدهای انتساب هویتی",
+    val osintCandidates: String = "یافته‌های اولیه OSINT"
 ) {
     val targetAddressLabel: String get() = targetAddress
     val caseRefLabel: String get() = caseReferenceNumber
@@ -230,7 +269,7 @@ object AppLocalization {
         blockchainNetwork = "شبکه بلاکچین",
         targetAddress = "آدرس عمومی هدف جهت ردیابی",
         addressPlaceholder = "آدرس بیت‌کوین (1..., 3..., bc1q..., bc1p...) یا اتریوم (0x...)",
-        investigationScope = "محدوده و شرح مقدماتی تحقیق",
+        investigationScope = "سرنخ و ورودی تحقیق / شرح فرضیه اولیه",
         notesAndTags = "برچسب‌ها و یادداشت‌های کارشناس",
         searchDepth = "عمق بررسی ارتباط",
         queryLimit = "سقف دریافت تراکنش‌ها",
@@ -240,28 +279,28 @@ object AppLocalization {
         addressFormatType = "نوع آدرس شناسایی‌شده:",
         
         evidenceLogTitle = "زنجیره ادله و مستندات جرم‌یابی (Evidence Chain)",
-        evidenceLogSubtitle = "تفکیک صریح حقایق قطعی داده بلاکچین از محاسبات الگوریتمی، برچسب‌ها و الگوهای رفتاری",
-        categoryObservedFact = "حقیقت قطعی داده بلاکچین (Observed Fact)",
-        categoryAlgorithmResult = "محاسبه الگوریتمی (Calculation)",
+        evidenceLogSubtitle = "تفکیک صریح حقایق قطعی داده بلاکچین از داده‌های محاسبه‌شده، برچسب‌ها و قواعد تحلیلی",
+        categoryObservedFact = "حقیقت مشاهده‌شده قطعی داده بلاکچین (Observed Fact)",
+        categoryAlgorithmResult = "داده محاسبه‌شده قطعی (Calculated)",
         categoryAttribution = "انتساب و برچسب هویتی (Attribution)",
-        categoryBehavioralPattern = "الگوی رفتاری و سوءظن (Pattern Match)",
+        categoryBehavioralPattern = "الگوی رفتاری و انطباق جرم (Pattern Match)",
         categoryTemporalAnalysis = "تحلیل زمانی و توزیع شبانه‌روزی (Temporal)",
-        categoryInvestigatorConclusion = "جمع‌بندی کارشناس پرونده (Investigator Note)",
+        categoryInvestigatorConclusion = "ارزیابی و جمع‌بندی کارشناس پرونده (Investigator Note)",
         confidenceDefinitive = "قطعیت ۱۰۰٪ داده بلاکچین",
-        confidenceHigh = "احتمال بالا (تایید چندگانه)",
-        confidenceMedium = "احتمال متوسط (قانون تحلیلی)",
-        confidenceHeuristic = "فرضیه تحلیلی بر اساس نشانه تحلیلی",
+        confidenceHigh = "احتمال بالا (تایید چندگانه منابع)",
+        confidenceMedium = "احتمال متوسط (شاخص تحلیلی تاییدشده)",
+        confidenceHeuristic = "فرضیه تحلیلی بر اساس قواعد و شاخص‌های رفتاری",
         filterAllEvidence = "همه ادله",
         filterOnlyFacts = "فقط حقایق قطعی",
         filterOnlyPatterns = "فقط الگوهای مشکوک",
         
-        balance = "موجودی فعلی کیف‌پول",
+        balance = "موجودی ثبت‌شده در داده‌های بلاکچین",
         totalReceived = "مجموع ورودی ثبت‌شده",
         totalSent = "مجموع خروجی ثبت‌شده",
         totalTransactions = "تعداد کل تراکنش‌ها",
         firstActivity = "اولین تراکنش مشاهده‌شده",
         lastActivity = "آخرین تراکنش مشاهده‌شده",
-        uniqueCounterparties = "طرف‌های مقابل یکتا",
+        uniqueCounterparties = "طرف‌های تراکنش یکتا / آدرس‌های مرتبط",
         riskIndicatorsDetected = "شاخص‌های ریسک شناسایی‌شده",
         
         customCurrencyRates = "نرخ‌های تبدیل ارزی (USD / تومان)",
@@ -278,7 +317,7 @@ object AppLocalization {
         direction = "جهت تراکنش",
         amount = "مبلغ موثر",
         fee = "کارمزد شبکه",
-        counterparties = "طرف‌های مقابل",
+        counterparties = "طرف‌های تراکنش / آدرس‌های مرتبط",
         dirIncoming = "ورودی (دریافتی)",
         dirOutgoing = "خروجی (ارسالی)",
         dirSelf = "انتقال داخلی (تغییر خرد)",
@@ -315,8 +354,8 @@ object AppLocalization {
         exportGraph = "خروجی گراف (GraphML / JSON)",
         exportPdfReport = "صدور گزارش رسمی جرم‌یابی (PDF)",
         
-        counterpartyMatrix = "ماتریس طرف‌های مقابل و ارتباطات متقابل",
-        counterpartyAddress = "آدرس طرف مقابل",
+        counterpartyMatrix = "ماتریس طرف‌های تراکنش و آدرس‌های مرتبط",
+        counterpartyAddress = "آدرس طرف تراکنش",
         interactionCount = "تعداد دفعات تعامل",
         volumeReceived = "مجموع دریافتی از این آدرس",
         volumeSent = "مجموع ارسالی به این آدرس",
@@ -528,7 +567,42 @@ object AppLocalization {
         copyAddress = "Copy Address",
         copiedToClipboard = "Address copied to clipboard.",
         errorOccurred = "An error occurred:",
-        disclaimerText = "Legal Notice: Pattern similarities and attributions are analytical indicators and do not establish criminal conduct. The system strictly isolates verifiable on-chain facts from analytical inferences."
+        disclaimerText = "Legal Notice: Pattern similarities and attributions are analytical indicators and do not establish criminal conduct. The system strictly isolates verifiable on-chain facts from analytical inferences.",
+
+        questionWhereAmI = "Where am I?",
+        questionWhatAmILookingAt = "What am I looking at?",
+        questionWhatDoesThisMean = "What does this mean?",
+        questionWhatShouldIDoNext = "What should I do next?",
+
+        stageObjective = "Stage Objective",
+        requiredInputs = "Required Inputs",
+        currentFindings = "Current Findings",
+        evidenceCollected = "Evidence Collected",
+        whatThisMeans = "Forensic Implications",
+        recommendedNextAction = "Recommended Next Action",
+        alternativeActions = "Alternative Actions",
+        deadEndConditions = "Dead-End Conditions & Recovery",
+        learnMoreConcept = "Learn About This Concept",
+
+        modeGuidedTitle = "Guided Investigation",
+        modeGuidedSubtitle = "Structured step-by-step guidance, action recommendations, and contextual education",
+        modeAnalystTitle = "Analyst Workspace",
+        modeAnalystSubtitle = "Direct access to graph, deep filters, matrices, and forensic tools",
+        modeQuickCheckTitle = "Quick Check",
+        modeQuickCheckSubtitle = "Rapid triage and risk assessment of a single address lead without a full case",
+
+        quickStepInput = "1. Input Lead",
+        quickStepValidate = "2. Validate",
+        quickStepSummary = "3. Activity Summary",
+        quickStepSignals = "4. Key Signals",
+        quickStepNextAction = "5. Next Action & Escalation",
+        escalateToGuided = "Escalate to Guided Investigation",
+        escalateToAnalyst = "Open in Analyst Workspace",
+        leadAddressLabel = "Lead Address",
+        keyRiskSignals = "Key Risk Signals",
+        sanctionsCheckStatus = "Sanctions Screening Status",
+        attributionCandidates = "Attribution Candidates",
+        osintCandidates = "OSINT Findings"
     )
 
     fun getStrings(language: AppLanguage): ForensicStrings {

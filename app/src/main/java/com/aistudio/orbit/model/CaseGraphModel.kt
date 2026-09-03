@@ -51,10 +51,13 @@ enum class ForensicEntityCategory {
  */
 @Serializable
 enum class ForensicEpistemicStatus(val displayNameEn: String, val displayNameFa: String) {
-    UNDISPUTED_LEDGER_FACT("Undisputed Ledger Fact", "حقیقت قطعی دفترکل"),
-    ALGORITHMIC_CALCULATION("Algorithmic Calculation", "محاسبه الگوریتمی"),
-    DERIVED_OSINT_INFERENCE("Derived OSINT Inference", "استنتاج هوشمندی منابع باز"),
-    WORKING_HYPOTHESIS("Working Hypothesis", "فرضیه کاری تحقیق")
+    UNDISPUTED_LEDGER_FACT("Undisputed On-Chain Fact", "حقیقت قطعی داده بلاکچین"),
+    EXTERNAL_SOURCE("Verified External Source", "منبع خارجی معتبر"),
+    ALGORITHMIC_CALCULATION("Calculated From Chain Data", "محاسبه‌شده از داده‌های زنجیره"),
+    DERIVED_OSINT_INFERENCE("Analytical OSINT Inference", "استنتاج تحلیلی منابع باز (OSINT)"),
+    WORKING_HYPOTHESIS("Working Hypothesis", "فرضیه کاری تحقیق"),
+    INVESTIGATOR_ASSESSMENT("Investigator Assessment", "ارزیابی کارشناس رسمی پرونده"),
+    UNKNOWN("Unknown / Unverified", "نامشخص / نیازمند بررسی")
 }
 
 /**

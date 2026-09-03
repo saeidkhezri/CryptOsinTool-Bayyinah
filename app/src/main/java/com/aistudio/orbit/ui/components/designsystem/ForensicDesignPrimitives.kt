@@ -368,3 +368,174 @@ fun ForensicEmptyState(
         }
     }
 }
+
+/**
+ * Visual Epistemic System (Prompt 2 & Master Instruction §13).
+ * Explicit knowledge categories:
+ * - OBSERVED_FACT: Direct on-chain cryptographic proof
+ * - EXTERNAL_SOURCE: Attribution/intelligence from verified 3rd-party provider
+ * - CALCULATED: Deterministic algorithmic derivation from chain data
+ * - INFERENCE: Probabilistic conclusion from clustering or heuristics
+ * - HYPOTHESIS: Working theoretical assumption under test
+ * - INVESTIGATOR_ASSESSMENT: Professional conclusion certified by forensic investigator
+ * - UNKNOWN: Unverified data requiring further evidence
+ */
+enum class ForensicEpistemicType(
+    val labelEn: String,
+    val labelFa: String,
+    val descriptionEn: String,
+    val descriptionFa: String
+) {
+    OBSERVED_FACT(
+        "Observed Fact",
+        "حقیقت قطعی بلاکچین",
+        "Direct cryptographic observation from immutable blockchain data",
+        "مشاهده مستقیم رمزنگاری‌شده از سوابق تغییرناپذیر بلاکچین"
+    ),
+    EXTERNAL_SOURCE(
+        "External Source",
+        "منبع خارجی معتبر",
+        "Attribution from external providers or verified registries",
+        "داده یا انتساب گزارش‌شده توسط ارائه‌دهنده خارجی معتبر"
+    ),
+    CALCULATED(
+        "Calculated",
+        "محاسبه‌شده",
+        "Deterministic mathematical derivation from on-chain facts",
+        "محاسبه مستقیم ریاضی و قطعی از داده‌های موجود"
+    ),
+    INFERENCE(
+        "Analytical Inference",
+        "استنتاج تحلیلی",
+        "Probabilistic conclusion based on behavioral heuristics or clustering",
+        "نتیجه‌گیری احتمالی مبتنی بر قواعد تحلیلی و خوشه‌بندی"
+    ),
+    HYPOTHESIS(
+        "Hypothesis",
+        "فرضیه کاری",
+        "Working theoretical model pending verification",
+        "فرضیه آزمایشی در دست بررسی و ارزیابی شواهد"
+    ),
+    INVESTIGATOR_ASSESSMENT(
+        "Investigator Assessment",
+        "ارزیابی کارشناس",
+        "Professional conclusion registered by an authorized investigator",
+        "جمع‌بندی تخصصی ثبت‌شده توسط کارشناس رسمی پرونده"
+    ),
+    UNKNOWN(
+        "Unknown",
+        "نامشخص",
+        "Unverified claim lacking sufficient supporting evidence",
+        "داده فاقد شواهد کافی که نیازمند اعتبارسنجی بیشتر است"
+    )
+}
+
+/**
+ * Standardized Visual Epistemic Badge:
+ * Combines distinct Icon + Label + Source attribution + Evidentiary Confidence.
+ * Does not rely on color alone (includes borders, icons, text, and metadata).
+ */
+@Composable
+fun ForensicEpistemicBadge(
+    type: ForensicEpistemicType,
+    modifier: Modifier = Modifier,
+    isPersian: Boolean = false,
+    source: String? = null,
+    confidencePercent: Int? = null,
+    compact: Boolean = false
+) {
+    val (containerColor, contentColor, icon) = when (type) {
+        ForensicEpistemicType.OBSERVED_FACT -> Triple(
+            Color(0xFF1B5E20).copy(alpha = 0.15f),
+            Color(0xFF2E7D32),
+            Icons.Default.Verified
+        )
+        ForensicEpistemicType.EXTERNAL_SOURCE -> Triple(
+            Color(0xFF0D47A1).copy(alpha = 0.15f),
+            Color(0xFF1565C0),
+            Icons.Default.Public
+        )
+        ForensicEpistemicType.CALCULATED -> Triple(
+            Color(0xFF4A148C).copy(alpha = 0.15f),
+            Color(0xFF7B1FA2),
+            Icons.Default.Analytics
+        )
+        ForensicEpistemicType.INFERENCE -> Triple(
+            Color(0xFFE65100).copy(alpha = 0.15f),
+            Color(0xFFEF6C00),
+            Icons.Default.Psychology
+        )
+        ForensicEpistemicType.HYPOTHESIS -> Triple(
+            Color(0xFFF57F17).copy(alpha = 0.15f),
+            Color(0xFFF9A825),
+            Icons.Default.Lightbulb
+        )
+        ForensicEpistemicType.INVESTIGATOR_ASSESSMENT -> Triple(
+            Color(0xFF004D40).copy(alpha = 0.15f),
+            Color(0xFF00796B),
+            Icons.Default.AssignmentInd
+        )
+        ForensicEpistemicType.UNKNOWN -> Triple(
+            MaterialTheme.colorScheme.surfaceVariant,
+            MaterialTheme.colorScheme.onSurfaceVariant,
+            Icons.Default.HelpOutline
+        )
+    }
+
+    val label = if (isPersian) type.labelFa else type.labelEn
+
+    Surface(
+        shape = ForensicShapes.pill,
+        color = containerColor,
+        border = CardDefaults.outlinedCardBorder().copy(
+            brush = androidx.compose.ui.graphics.SolidColor(contentColor.copy(alpha = 0.4f))
+        ),
+        modifier = modifier
+    ) {
+        Row(
+            modifier = Modifier.padding(
+                horizontal = if (compact) ForensicSpacing.sm else ForensicSpacing.md,
+                vertical = ForensicSpacing.xs
+            ),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(ForensicSpacing.xs)
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = label,
+                tint = contentColor,
+                modifier = Modifier.size(if (compact) 12.dp else 15.dp)
+            )
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                color = contentColor,
+                fontWeight = FontWeight.Bold
+            )
+            if (source != null && !compact) {
+                Text(
+                    text = "• $source",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = contentColor.copy(alpha = 0.85f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+            if (confidencePercent != null) {
+                Surface(
+                    shape = ForensicShapes.xs,
+                    color = contentColor.copy(alpha = 0.18f)
+                ) {
+                    Text(
+                        text = "$confidencePercent%",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = contentColor,
+                        fontWeight = FontWeight.ExtraBold,
+                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+

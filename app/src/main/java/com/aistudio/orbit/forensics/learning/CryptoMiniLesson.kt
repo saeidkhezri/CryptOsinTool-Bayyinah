@@ -39,7 +39,12 @@ enum class MiniLessonTopic {
     SANCTIONS_LIST,
     VASP_REGULATION,
     PEELING_CHAIN,
-    DIURNAL_CYCLE
+    DIURNAL_CYCLE,
+    WHY_CLUSTERED,
+    CONFIDENCE_METRIC,
+    BLOCK_TIMESTAMP_VS_ACTIVITY,
+    ADDRESS_VS_WALLET,
+    UTXO_MODEL
 }
 
 enum class LearningStatus {
@@ -172,6 +177,61 @@ object CryptoMiniLessonRegistry {
             whyItMattersEn = "Bridges abstract on-chain cryptographic addresses with real-world entities, usernames, and web footprints.",
             whatNotToInferFa = "یک متن یا ادعای موجود در وب‌سایت یا انجمن به معنی اثبات هویت نیست؛ نیاز به صحه‌گذاری مجزا دارد.",
             whatNotToInferEn = "An unverified mention or forum post does not prove identity or ownership without corroborating evidence."
+        ),
+        MiniLessonTopic.WHY_CLUSTERED to CryptoMiniLesson(
+            topic = MiniLessonTopic.WHY_CLUSTERED,
+            titleFa = "چرا این آدرس با آدرس دیگر در یک خوشه قرار گرفته است؟",
+            titleEn = "Why Are These Addresses Clustered Together?",
+            whatIsItFa = "قاعده تحلیلی هزینه مشترک ورودی‌ها (Common Input Ownership Heuristic): وقتی چند آدرس مختلف به عنوان ورودی (Input) یک تراکنش واحد خرج می‌شوند، معمولاً توسط یک کلید خصوصی یا یک کیف‌پول واحد کنترل می‌شوند.",
+            whatIsItEn = "Common-Input Ownership Heuristic (CIOH): When multiple distinct addresses are spent together as inputs in a single transaction, they are presumed to be co-owned or controlled by the same wallet entity.",
+            whyItMattersFa = "به کشف کل شبکه کیف‌پول پنهان‌شده پشت آدرس‌های یک‌بارمصرف و آدرس‌های باقیمانده (Change Addresses) کمک می‌کند.",
+            whyItMattersEn = "Reveals the full underlying wallet cluster and control boundary obscured across single-use addresses.",
+            whatNotToInferFa = "توجه: در تراکنش‌های کوین‌جوین (CoinJoin) یا میکسرها، چندین کاربر ناشناس ورودی‌های خود را مشترکاً در یک تراکنش می‌آورند؛ بنابراین کوین‌جوین نباید به عنوان یک خوشه تک‌مالک تلقی شود.",
+            whatNotToInferEn = "Caution: CoinJoin, PayJoin, and multi-party aggregator transactions combine inputs from different owners. Clustered grouping is an inference, not an absolute cryptographic fact."
+        ),
+        MiniLessonTopic.CONFIDENCE_METRIC to CryptoMiniLesson(
+            topic = MiniLessonTopic.CONFIDENCE_METRIC,
+            titleFa = "این درصد اطمینان دقیقاً چه چیزی را اندازه می‌گیرد؟",
+            titleEn = "What Does This Confidence Metric Actually Measure?",
+            whatIsItFa = "میزان تاییدپذیری، استقلال منابع، سازگاری زمانی و کیفیت ادله جمع‌آوری‌شده برای یک ادعای تحلیلی خاص.",
+            whatIsItEn = "A structured evidentiary index quantifying multi-source corroboration, source independence, temporal validity, and heuristic reliability.",
+            whyItMattersFa = "از اشتباه گرفتن احتمال و سوءظن با مدارک اثباتی غیرقابل انکار در محاکم قضایی جلوگیری می‌کند.",
+            whyItMattersEn = "Prevents conflating statistical suspicion or heuristic probability with immutable cryptographic proof.",
+            whatNotToInferFa = "درصد اطمینان بالا (مثلاً ۹۰٪) به معنی حکم قطعی دادگاه یا اثبات مجرمیت شخص نیست؛ بلکه نشان‌دهنده استحکام ادله جمع‌آوری‌شده است.",
+            whatNotToInferEn = "A high score measures evidence consistency and independent corroboration, not judicial culpability."
+        ),
+        MiniLessonTopic.BLOCK_TIMESTAMP_VS_ACTIVITY to CryptoMiniLesson(
+            topic = MiniLessonTopic.BLOCK_TIMESTAMP_VS_ACTIVITY,
+            titleFa = "چرا زمان بلاک معادل زمان فعالیت کاربر نیست؟",
+            titleEn = "Why Block Timestamp Does Not Equal User Activity Time",
+            whatIsItFa = "زمان ثبت‌شده در هدر بلاک (nTime) توسط ماینری که بلاک را استخراج کرده تعیین می‌شود و پروتکل اجازه تا ۲ ساعت انحراف با زمان واقعی شبکه را می‌دهد.",
+            whatIsItEn = "The timestamp in a block header is set by the miner upon block creation, with consensus rules allowing up to 2 hours of temporal drift relative to network adjusted time.",
+            whyItMattersFa = "تحلیلگران باید تاخیر انتظار در مم‌پول (Mempool) و بازه خطای ماینر را در تحلیل‌های شبانه‌روزی (Diurnal) و مناطق زمانی لحاظ کنند.",
+            whyItMattersEn = "Investigators must account for mempool residency delay and miner clock skew before inferring user timezone.",
+            whatNotToInferFa = "زمان بلاک را نباید به عنوان ثانیه دقیق فشردن دکمه ارسال توسط متهم در نظر گرفت؛ این زمان صرفاً زمان تقریبی استخراج بلاک توسط استخر است.",
+            whatNotToInferEn = "Never use raw block timestamps as proof of the suspect's exact second of physical interaction."
+        ),
+        MiniLessonTopic.ADDRESS_VS_WALLET to CryptoMiniLesson(
+            topic = MiniLessonTopic.ADDRESS_VS_WALLET,
+            titleFa = "آدرس در برابر کیف‌پول (Address vs Wallet)",
+            titleEn = "Address vs Wallet Distinction",
+            whatIsItFa = "آدرس یک شناسه دریافت وجه رمزنگاری‌شده است، در حالی که کیف‌پول مجموعه‌ای از کلیدها است که می‌تواند هزاران آدرس را همزمان کنترل کند.",
+            whatIsItEn = "An address is a single cryptographic receive endpoint, whereas a wallet manages hundreds or thousands of addresses under private keys.",
+            whyItMattersFa = "عدم درک این تفاوت منجر به سوءتعبیر خطرناک در پرونده می‌شود؛ نباید فعالیت یک آدرس را به کل دارایی‌های سوژه تعمیم داد.",
+            whyItMattersEn = "Failing to distinguish them leads to flawed forensic conclusions; one address does not reveal the subject's entire holdings.",
+            whatNotToInferFa = "هیچ‌گاه فرض نکنید هر آدرس جدید یعنی یک فرد جدید یا صاحب حساب مجزا.",
+            whatNotToInferEn = "Never assume every distinct address belongs to a different real-world person or entity."
+        ),
+        MiniLessonTopic.UTXO_MODEL to CryptoMiniLesson(
+            topic = MiniLessonTopic.UTXO_MODEL,
+            titleFa = "مدل خروجی خرج‌نشده (UTXO Model)",
+            titleEn = "UTXO Accounting Model",
+            whatIsItFa = "مدل حسابداری بیت‌کوین که دارایی را به صورت قطعات خروجی تراکنش‌های قبلی که هنوز خرج نشده‌اند نگهداری می‌کند.",
+            whatIsItEn = "The Bitcoin accounting model which, unlike account-based ledgers, represents balances as discrete unspent coin outputs.",
+            whyItMattersFa = "درک UTXO برای ردیابی خوشه‌بندی ورودی مشترک (CIOH) و پیلینگ‌چین حیاتی است.",
+            whyItMattersEn = "Understanding UTXOs is essential for common-input clustering heuristics and peel chain tracing.",
+            whatNotToInferFa = "خرج شدن یک UTXO به معنی انتقال کامل وجه به شخص ثالث نیست؛ معمولاً بخشی از آن به عنوان باقیمانده به فرستنده بازمی‌گردد.",
+            whatNotToInferEn = "Spending a UTXO does not mean transferring the entire sum to a third party; change outputs return to the spender."
         )
     )
 
@@ -195,7 +255,7 @@ object CryptoMiniLessonRegistry {
 @Composable
 fun LearnThisBadge(
     topic: MiniLessonTopic,
-    isPersian: Boolean,
+    isPersian: Boolean = true,
     onClick: () -> Unit
 ) {
     val lesson = remember(topic) { CryptoMiniLessonRegistry.getLesson(topic) }
@@ -225,6 +285,22 @@ fun LearnThisBadge(
             )
         }
     }
+}
+
+@Composable
+fun CryptoMiniLessonDialog(
+    topic: MiniLessonTopic,
+    isPersian: Boolean = true,
+    onDismiss: () -> Unit,
+    onMarkUnderstood: (() -> Unit)? = null
+) {
+    val lesson = remember(topic) { CryptoMiniLessonRegistry.getLesson(topic) }
+    CryptoMiniLessonDialog(
+        lesson = lesson,
+        isPersian = isPersian,
+        onDismiss = onDismiss,
+        onMarkUnderstood = onMarkUnderstood
+    )
 }
 
 @Composable

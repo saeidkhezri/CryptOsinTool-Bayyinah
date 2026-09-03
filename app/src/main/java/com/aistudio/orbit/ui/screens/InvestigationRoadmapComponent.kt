@@ -29,9 +29,16 @@ import com.aistudio.orbit.model.RiskSeverity
 import com.aistudio.orbit.ui.components.designsystem.*
 import com.aistudio.orbit.ui.theme.*
 
+import androidx.compose.animation.AnimatedVisibility
 import com.aistudio.orbit.model.ExperienceMode
 import com.aistudio.orbit.model.InvestigationState
 import com.aistudio.orbit.model.InvestigationStateMachine
+import com.aistudio.orbit.forensics.learning.CryptoMiniLessonDialog
+import com.aistudio.orbit.forensics.learning.CryptoMiniLessonRegistry
+import com.aistudio.orbit.forensics.learning.LearnThisBadge
+import com.aistudio.orbit.forensics.learning.MiniLessonTopic
+import com.aistudio.orbit.repository.AppLanguage
+import com.aistudio.orbit.localization.AppLocalization
 
 enum class StageStatus(val displayNameFa: String, val displayNameEn: String, val color: Color) {
     COMPLETED("تکمیل شده", "Completed", Color(0xFF10B981)), // Emerald Green
@@ -505,6 +512,95 @@ fun calculateNextBestAction(
     }
 }
 
+fun getStageLessonTopic(stage: InvestigationStage): MiniLessonTopic {
+    return when (stage) {
+        InvestigationStage.START_CASE, InvestigationStage.INITIAL_LEAD -> MiniLessonTopic.ADDRESS_VS_WALLET
+        InvestigationStage.BLOCKCHAIN_DISCOVERY -> MiniLessonTopic.UTXO_MODEL
+        InvestigationStage.TRANSACTIONS_LEDGER -> MiniLessonTopic.CHANGE_ADDRESS
+        InvestigationStage.RELATED_ADDRESSES -> MiniLessonTopic.WHY_CLUSTERED
+        InvestigationStage.PATTERN_ANALYSIS -> MiniLessonTopic.PEELING_CHAIN
+        InvestigationStage.OSINT_REVIEW -> MiniLessonTopic.OSINT_INTELLIGENCE
+        InvestigationStage.RISK_REVIEW -> MiniLessonTopic.SANCTIONS_LIST
+        InvestigationStage.EVIDENCE_REVIEW -> MiniLessonTopic.CONFIDENCE_METRIC
+        InvestigationStage.CONCLUSION -> MiniLessonTopic.BLOCK_TIMESTAMP_VS_ACTIVITY
+        InvestigationStage.REPORT -> MiniLessonTopic.VASP_REGULATION
+    }
+}
+
+fun getStageForensicMeaning(stage: InvestigationStage, case: InvestigationCase, isPersian: Boolean): String {
+    return when (stage) {
+        InvestigationStage.START_CASE, InvestigationStage.INITIAL_LEAD -> if (isPersian)
+            "تایید فرمت آدرس نشان‌دهنده ساختار رمزارزی معتبر است، اما به معنی مالکیت یک شخص واحد نیست؛ هر آدرس می‌تواند متعلق به یک والت خصوصی یا یک والت چندامضایی صرافی باشد."
+        else
+            "Address validation confirms structural correctness, but does not indicate single-entity ownership. The address may belong to a personal wallet, multi-sig contract, or custodian pool."
+
+        InvestigationStage.BLOCKCHAIN_DISCOVERY -> if (isPersian)
+            "موجودی ثبت‌شده در بلاکچین یک حقیقت قطعی غیرقابل انکار است. توجه داشته باشید که موجودی صفر به معنی عدم فعالیت نیست؛ بسیاری از شبکه‌های پولشویی وجوه را فوراً خالی می‌کنند."
+        else
+            "On-chain balance is an undisputed ledger fact. Note that a zero balance does NOT mean no activity; illicit schemes often drain funds immediately after receipt."
+
+        InvestigationStage.TRANSACTIONS_LEDGER -> if (isPersian)
+            "جریان وجوه در بیت‌کوین بر مبنای UTXO است؛ خروجی‌های یک تراکنش معمولاً شامل مقصد اصلی به همراه یک آدرس باقیمانده (Change Address) جدید هستند. همه خروجی‌ها دریافت‌کننده وجه نیستند."
+        else
+            "Bitcoin flows follow the UTXO model where outputs typically split between destination payment and a fresh change address. Not all transaction outputs represent beneficiaries."
+
+        InvestigationStage.RELATED_ADDRESSES -> if (isPersian)
+            "خوشه‌بندی آدرس‌ها بر اساس قاعده هزینه مشترک ورودی‌ها (CIOH) استوار است. در صورتی که تراکنش از نوع کوین‌جوین نباشد، آدرس‌های ورودی مشترک معمولاً متعلق به یک شخص یا کیف‌پول هستند."
+        else
+            "Address clustering relies on the Common-Input Ownership Heuristic. Unless CoinJoin mixing is present, co-spent inputs are analytically inferred to share common control."
+
+        InvestigationStage.PATTERN_ANALYSIS -> if (isPersian)
+            "انطباق با الگوهای رفتاری (نظیر Peeling Chain یا خردسازی) شاخص تحلیلی برای کشف پولشویی است؛ این انطباق سوءظن فنی ایجاد می‌کند اما به تنهایی اثبات‌کننده جرم نیست."
+        else
+            "Pattern matches (like Peeling Chains or Structuring) provide analytical suspicion and behavioral indicators, but do not constitute standalone proof of criminal conduct."
+
+        InvestigationStage.OSINT_REVIEW -> if (isPersian)
+            "یافته‌های منابع باز (فروم‌ها، دامنه‌ها، پایگاه‌های نشت داده) پل میان آدرس و دنیای واقعی هستند. هر داده OSINT باید تا زمان ارزیابی مستقل به عنوان فرضیه کاری تلقی شود."
+        else
+            "Open-source findings bridge on-chain hashes with real-world identities. All OSINT data must be classified as unverified hypotheses until independently corroborated."
+
+        InvestigationStage.RISK_REVIEW -> if (isPersian)
+            "شاخص‌های ریسک بر اساس تعامل با نهادهای پرخطر، میکسرها یا لیست‌های تحریمی محاسبه می‌شوند. تعامل با میکسر به معنی مجرمیت قطعی نیست اما اولویت بررسی را افزایش می‌دهد."
+        else
+            "Risk scores quantify exposure to high-risk services, mixers, or sanctions. Mixer exposure is an investigative indicator, not automatic judicial culpability."
+
+        InvestigationStage.EVIDENCE_REVIEW -> if (isPersian)
+            "زنجیره ادله باید حقایق قطعی بلاکچین را از استنتاجات و فرضیه‌ها تفکیک کند. این تفکیک شرط لازم برای پذیرش گزارش در محاکم قضایی است."
+        else
+            "The evidence chain must isolate immutable ledger facts from analytical inferences and working hypotheses to ensure courtroom admissibility."
+
+        InvestigationStage.CONCLUSION -> if (isPersian)
+            "ارزیابی نهایی کارشناس حاصل تلفیق ادله معتبر است؛ در این مرحله تناقضات برطرف شده و فرضیه برگزیده با ضریب اطمینان مشخص بیان می‌شود."
+        else
+            "The investigator's conclusion synthesizes verified evidence, resolving contradictions and articulating the favored hypothesis with measured confidence."
+
+        InvestigationStage.REPORT -> if (isPersian)
+            "گزارش نهایی سند قانونی پرونده است که شامل امضای دیجیتال، ارجاعات ادله و سلب مسئولیت‌های فارنزیک می‌باشد."
+        else
+            "The final dossier is a sealed legal instrument containing cryptographic hashes, evidence references, and forensic limitation disclaimers."
+    }
+}
+
+fun getStageDeadEndAnalysis(stage: InvestigationStage, case: InvestigationCase, isPersian: Boolean): Pair<Boolean, String>? {
+    return when {
+        case.transactions.isEmpty() && case.balanceBtc == 0.0 -> {
+            val message = if (isPersian)
+                "هشدار بن‌بست ظاهری: هیچ تراکنش یا موجودی در این آدرس ثبت نشده است.\n• علت: آدرس ممکن است جدید باشد، یا تراکنش‌ها در شبکه دیگری صورت گرفته باشند.\n• اقدام جایگزین: شبکه بلاکچین را تغییر دهید یا منتظر ثبت تراکنش در مم‌پول بمانید."
+            else
+                "Potential Dead-End: No transactions or balance recorded on this address.\n• Cause: The address may be newly generated, or activity occurred on another network.\n• Alternative: Switch network or monitor the mempool for unconfirmed transactions."
+            Pair(true, message)
+        }
+        case.balanceBtc == 0.0 && case.transactions.isNotEmpty() -> {
+            val message = if (isPersian)
+                "توجه: موجودی فعلی صفر است، اما این وضعیت بن‌بست نیست!\n• علت: کل وجوه به آدرس‌های دیگر منتقل شده است.\n• اقدام جایگزین: سوابق ${case.transactions.size} تراکنش و ${case.counterparties.size} طرف تراکنش را در گراف دنبال کنید."
+            else
+                "Note: Current balance is zero, but this is NOT a dead-end!\n• Cause: All funds have been transferred out to secondary wallets.\n• Alternative: Follow the historical trail across ${case.transactions.size} transactions and ${case.counterparties.size} counterparties."
+            Pair(false, message)
+        }
+        else -> null
+    }
+}
+
 @Composable
 fun GuideStageTemplate(
     stage: InvestigationStage,
@@ -514,9 +610,16 @@ fun GuideStageTemplate(
     onSkipStage: (String) -> Unit,
     content: @Composable () -> Unit
 ) {
+    val strings = AppLocalization.getStrings(if (isPersian) AppLanguage.PERSIAN else AppLanguage.ENGLISH)
     val nextAction = remember(stage, case) { calculateNextBestAction(stage, case) }
     var skipReasonText by remember { mutableStateOf("") }
     var showSkipDialog by remember { mutableStateOf(false) }
+    var isFullDetailExpanded by remember { mutableStateOf(false) }
+    var activeLessonTopic by remember { mutableStateOf<MiniLessonTopic?>(null) }
+
+    val stageLesson = remember(stage) { getStageLessonTopic(stage) }
+    val forensicMeaning = remember(stage, case, isPersian) { getStageForensicMeaning(stage, case, isPersian) }
+    val deadEndInfo = remember(stage, case, isPersian) { getStageDeadEndAnalysis(stage, case, isPersian) }
 
     Column(
         modifier = Modifier
@@ -524,97 +627,86 @@ fun GuideStageTemplate(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Step Header Info: Where am I? What do I see? What do I do?
+        // 1. OBJECTIVE (Stage Objective + Context)
         ForensicCard(
             containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f),
-            borderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
-        ) {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Info,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Text(
-                        text = if (isPersian) "من کجا هستم؟" else "Where am I?",
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
-
-                Text(
-                    text = if (isPersian) "مرحله ${stage.id}: ${stage.titleFa}" else "Stage ${stage.id}: ${stage.titleEn}",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Black
-                )
-
-                Spacer(modifier = Modifier.height(4.dp))
-
-                Text(
-                    text = if (isPersian) "چه چیزی می‌بینم؟" else "What am I seeing?",
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.secondary
-                )
-
-                Text(
-                    text = if (isPersian) stage.objectiveFa else stage.objectiveEn,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-
-                Spacer(modifier = Modifier.height(4.dp))
-
-                Text(
-                    text = if (isPersian) "حالا چه کار کنم؟" else "What should I do now?",
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFFFFD54F) // Forensic Accent Gold
-                )
-
-                Text(
-                    text = if (isPersian) 
-                        "داده‌های واکشی‌شده در زیر را بازبینی کنید، فیلترهای دلخواه را با کنترل‌های موجود تغییر دهید و سپس با استفاده از اقدام پیشنهادی، تحلیل پرونده را به پیش ببرید."
-                        else "Inspect retrieved metrics below, fine-tune dynamic parameters via analyst controls, and tap the Next Best Action CTA to advance the case.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-
-        // Live Sub-view Content
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f, fill = false)
-        ) {
-            content()
-        }
-
-        // Stage-to-Stage Handoff Panel & Analyst Parameter Controls
-        ForensicCard(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer,
-            borderColor = MaterialTheme.colorScheme.outlineVariant
+            borderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)
         ) {
             Column(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Surface(
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(24.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Text(
+                                    text = "${stage.id}",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onPrimary
+                                )
+                            }
+                        }
+                        Text(
+                            text = if (isPersian) stage.titleFa else stage.titleEn,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Black,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+
+                    LearnThisBadge(
+                        topic = stageLesson,
+                        onClick = { activeLessonTopic = stageLesson }
+                    )
+                }
+
                 Text(
-                    text = if (isPersian) "امور فرستاده مرحله به مرحله (Stage Handoff & Controls)" else "Stage Handoff & Controls",
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
+                    text = if (isPersian) stage.objectiveFa else stage.objectiveEn,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+            }
+        }
+
+        // 2. REQUIRED INPUTS
+        ForensicCard(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+            borderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Input,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Text(
+                        text = strings.requiredInputs,
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -623,85 +715,222 @@ fun GuideStageTemplate(
                 ) {
                     Column {
                         Text(
-                            text = if (isPersian) "ورودی موروثی:" else "Inherited Lead Address:",
+                            text = strings.leadAddressLabel,
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.outline
                         )
-                        val shortAddr = remember(case.targetAddress) {
-                            com.aistudio.orbit.util.ForensicBidiUtils.formatLtrTechnicalString(case.targetAddress)
-                        }
                         Text(
-                            text = shortAddr,
+                            text = case.targetAddress.take(14) + "..." + case.targetAddress.takeLast(8),
                             style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
-                            maxLines = 1
+                            fontWeight = FontWeight.Bold
                         )
                     }
 
                     Column(horizontalAlignment = Alignment.End) {
                         Text(
-                            text = if (isPersian) "شبکه فعال:" else "Active Network:",
+                            text = strings.blockchainNetwork,
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.outline
                         )
-                        Text(
+                        ForensicBadge(
                             text = "${case.network.symbol} (${case.network.name})",
-                            style = MaterialTheme.typography.bodySmall,
-                            fontWeight = FontWeight.Bold
+                            badgeType = ForensicBadgeType.PRIMARY
+                        )
+                    }
+                }
+            }
+        }
+
+        // 3. CURRENT FINDINGS (Summarized with on-demand technical detail)
+        ForensicCard(
+            containerColor = MaterialTheme.colorScheme.surface,
+            borderColor = MaterialTheme.colorScheme.outlineVariant
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Assessment,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.secondary,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Text(
+                            text = strings.currentFindings,
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.secondary
+                        )
+                    }
+
+                    TextButton(
+                        onClick = { isFullDetailExpanded = !isFullDetailExpanded },
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                    ) {
+                        Icon(
+                            imageVector = if (isFullDetailExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        Text(
+                            text = if (isFullDetailExpanded) {
+                                if (isPersian) "بستن جزئیات فنی" else "Hide Details"
+                            } else {
+                                if (isPersian) "مشاهده جزئیات کامل فنی" else "Show Full Details"
+                            },
+                            style = MaterialTheme.typography.labelSmall
                         )
                     }
                 }
 
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-
-                // Real-time parameter controls representation
-                Text(
-                    text = if (isPersian) "دسترسی مستقیم کنترل‌های کارشناسی:" else "Analyst Calibration & Filters:",
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Bold
-                )
-
+                // Summary Row (Always visible)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    SuggestionChip(
-                        onClick = { },
-                        label = { Text(if (isPersian) "تغییر محدوده زمان" else "Period") },
-                        icon = { Icon(Icons.Default.DateRange, null, modifier = Modifier.size(12.dp)) }
+                    ForensicMetricCard(
+                        label = strings.balance,
+                        value = "${String.format(java.util.Locale.US, "%.4f", case.balanceBtc)} BTC",
+                        icon = Icons.Default.AccountBalanceWallet,
+                        accentColor = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.weight(1f)
                     )
-                    SuggestionChip(
-                        onClick = { },
-                        label = { Text(if (isPersian) "افزودن آدرس سرنخ" else "Add Lead") },
-                        icon = { Icon(Icons.Default.Add, null, modifier = Modifier.size(12.dp)) }
+                    ForensicMetricCard(
+                        label = strings.totalTransactions,
+                        value = "${case.transactions.size}",
+                        icon = Icons.Default.ReceiptLong,
+                        accentColor = MaterialTheme.colorScheme.secondary,
+                        modifier = Modifier.weight(1f)
                     )
-                    SuggestionChip(
-                        onClick = { },
-                        label = { Text(if (isPersian) "محدوده تایید" else "Threshold") },
-                        icon = { Icon(Icons.Default.Tune, null, modifier = Modifier.size(12.dp)) }
+                    ForensicMetricCard(
+                        label = strings.uniqueCounterparties,
+                        value = "${case.counterparties.size}",
+                        icon = Icons.Default.Group,
+                        accentColor = MaterialTheme.colorScheme.tertiary,
+                        modifier = Modifier.weight(1f)
                     )
                 }
 
-                Button(
-                    onClick = { },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-                    ),
-                    shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier.fillMaxWidth()
+                // Expandable Full Live Sub-view Content
+                AnimatedVisibility(visible = isFullDetailExpanded) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 8.dp)
+                    ) {
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                        Spacer(Modifier.height(8.dp))
+                        content()
+                    }
+                }
+            }
+        }
+
+        // 4. EVIDENCE COLLECTED (Categorized with Epistemic Badges)
+        ForensicCard(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f),
+            borderColor = MaterialTheme.colorScheme.outlineVariant
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(6.dp))
+                    Icon(
+                        imageVector = Icons.Default.FactCheck,
+                        contentDescription = null,
+                        tint = Color(0xFF2E7D32),
+                        modifier = Modifier.size(16.dp)
+                    )
                     Text(
-                        text = if (isPersian) "به‌روزرسانی و اجرای دوباره کل تحلیل پرونده" else "Rerun Forensic Heuristic Analytics",
+                        text = "${strings.evidenceCollected} (${case.evidenceLog.size})",
                         style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF2E7D32)
+                    )
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    ForensicEpistemicBadge(
+                        type = ForensicEpistemicType.OBSERVED_FACT,
+                        isPersian = isPersian,
+                        source = "Ledger RPC",
+                        confidencePercent = 100,
+                        compact = true,
+                        modifier = Modifier.weight(1f)
+                    )
+                    ForensicEpistemicBadge(
+                        type = ForensicEpistemicType.CALCULATED,
+                        isPersian = isPersian,
+                        source = "Engine",
+                        confidencePercent = 95,
+                        compact = true,
+                        modifier = Modifier.weight(1f)
+                    )
+                    ForensicEpistemicBadge(
+                        type = ForensicEpistemicType.INFERENCE,
+                        isPersian = isPersian,
+                        source = "Heuristics",
+                        confidencePercent = 80,
+                        compact = true,
+                        modifier = Modifier.weight(1f)
                     )
                 }
             }
         }
 
-        // NEXT BEST ACTION PANEL (Propose, Reason, Evidence, Expected Value, Target CTA)
+        // 5. WHAT THIS MEANS (Forensic Translation)
+        ForensicCard(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            borderColor = MaterialTheme.colorScheme.outlineVariant
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Lightbulb,
+                        contentDescription = null,
+                        tint = Color(0xFFFFA000),
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Text(
+                        text = strings.whatThisMeans,
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFFE65100)
+                    )
+                }
+                Text(
+                    text = forensicMeaning,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+
+        // 6. RECOMMENDED NEXT ACTION (Next Best Action Engine)
         ForensicCard(
             containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f),
             borderColor = MaterialTheme.colorScheme.primary
@@ -711,66 +940,53 @@ fun GuideStageTemplate(
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(28.dp)
-                            .clip(CircleShape)
-                            .background(Color(0xFF00E5FF).copy(alpha = 0.2f)),
-                        contentAlignment = Alignment.Center
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.FlashOn,
-                            contentDescription = null,
-                            tint = Color(0xFF00E5FF),
-                            modifier = Modifier.size(16.dp)
-                        )
-                    }
-
-                    Column {
+                        Surface(
+                            modifier = Modifier.size(28.dp),
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.primary
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Default.FlashOn,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onPrimary,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
                         Text(
-                            text = if (isPersian) "موتور پیشنهاد اقدام برتر بعدی (Next Best Action)" else "Next Best Action Engine",
+                            text = strings.recommendedNextAction,
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary
                         )
-                        Text(
-                            text = if (isPersian) "بر اساس ادله موجود، هدف پرونده و منابع فعال" else "Calculated dynamically from case goals and providers",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.outline,
-                            fontSize = 8.sp
-                        )
                     }
-                }
 
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(
-                        text = if (isPersian) "اقدام پیشنهادی:" else "Proposed Forensic Action:",
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFFFFD54F)
-                    )
-                    Text(
-                        text = if (isPersian) nextAction.proposalFa else nextAction.proposalEn,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
+                    ForensicBadge(
+                        text = "AI RECOMMENDED",
+                        badgeType = ForensicBadgeType.PRIMARY
                     )
                 }
 
-                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text(
-                        text = if (isPersian) "علت پیشنهاد:" else "Rationale:",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.outline
-                    )
-                    Text(
-                        text = if (isPersian) nextAction.reasonFa else nextAction.reasonEn,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+                Text(
+                    text = if (isPersian) nextAction.proposalFa else nextAction.proposalEn,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Text(
+                    text = if (isPersian) nextAction.reasonFa else nextAction.reasonEn,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -807,9 +1023,7 @@ fun GuideStageTemplate(
                 Button(
                     onClick = { onNavigateNext(nextAction.targetStage) },
                     modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary
-                    ),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                     shape = RoundedCornerShape(8.dp)
                 ) {
                     Text(
@@ -827,16 +1041,167 @@ fun GuideStageTemplate(
             }
         }
 
-        // Skip Stage button
-        OutlinedButton(
-            onClick = { showSkipDialog = true },
-            modifier = Modifier.align(Alignment.CenterHorizontally),
-            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
+        // 7. ALTERNATIVE ACTIONS
+        ForensicCard(
+            containerColor = MaterialTheme.colorScheme.surface,
+            borderColor = MaterialTheme.colorScheme.outlineVariant
         ) {
-            Icon(Icons.Default.SkipNext, contentDescription = null, modifier = Modifier.size(16.dp))
-            Spacer(modifier = Modifier.width(6.dp))
-            Text(if (isPersian) "عبور از این مرحله (Skip with Reason)" else "Skip Stage with Reason")
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = strings.alternativeActions,
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = { onNavigateNext(InvestigationStage.RELATED_ADDRESSES) },
+                        modifier = Modifier.weight(1f),
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Icon(Icons.Default.AccountTree, contentDescription = null, modifier = Modifier.size(14.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text(if (isPersian) "گراف ارتباط" else "Graph", style = MaterialTheme.typography.labelSmall)
+                    }
+
+                    OutlinedButton(
+                        onClick = { onNavigateNext(InvestigationStage.OSINT_REVIEW) },
+                        modifier = Modifier.weight(1f),
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Icon(Icons.Default.Public, contentDescription = null, modifier = Modifier.size(14.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text(if (isPersian) "منابع OSINT" else "OSINT", style = MaterialTheme.typography.labelSmall)
+                    }
+
+                    OutlinedButton(
+                        onClick = { onNavigateNext(InvestigationStage.REPORT) },
+                        modifier = Modifier.weight(1f),
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Icon(Icons.Default.Description, contentDescription = null, modifier = Modifier.size(14.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text(if (isPersian) "گزارش نهایی" else "Report", style = MaterialTheme.typography.labelSmall)
+                    }
+                }
+
+                TextButton(
+                    onClick = { showSkipDialog = true },
+                    modifier = Modifier.align(Alignment.CenterHorizontally),
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Icon(Icons.Default.SkipNext, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(if (isPersian) "عبور از این مرحله (با ثبت علت کارشناسی)" else "Skip Stage with Reason")
+                }
+            }
         }
+
+        // 8. DEAD ENDS / BLOCKERS (Evidence-Aware Analysis)
+        if (deadEndInfo != null) {
+            val (isDeadEnd, explanation) = deadEndInfo
+            ForensicCard(
+                containerColor = if (isDeadEnd) MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.25f)
+                else MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.25f),
+                borderColor = if (isDeadEnd) MaterialTheme.colorScheme.error.copy(alpha = 0.5f)
+                else MaterialTheme.colorScheme.secondary.copy(alpha = 0.5f)
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Icon(
+                            imageVector = if (isDeadEnd) Icons.Default.ErrorOutline else Icons.Default.Info,
+                            contentDescription = null,
+                            tint = if (isDeadEnd) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.secondary,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Text(
+                            text = strings.deadEndConditions,
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = if (isDeadEnd) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.secondary
+                        )
+                    }
+                    Text(
+                        text = explanation,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+
+        // 9. LEARN ABOUT THIS CONCEPT (Contextual Education)
+        val lesson = remember(stageLesson) { CryptoMiniLessonRegistry.getLesson(stageLesson) }
+        ForensicCard(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+            borderColor = MaterialTheme.colorScheme.outlineVariant
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.MenuBook,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Text(
+                            text = if (isPersian) lesson.titleFa else lesson.titleEn,
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+
+                    TextButton(onClick = { activeLessonTopic = stageLesson }) {
+                        Text(
+                            text = if (isPersian) "مطالعه توضیحات تکمیلی" else "Read Full Guide",
+                            style = MaterialTheme.typography.labelSmall
+                        )
+                    }
+                }
+
+                Text(
+                    text = if (isPersian) lesson.whatIsItFa else lesson.whatIsItEn,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                )
+            }
+        }
+    }
+
+    // Contextual Educational Dialog
+    activeLessonTopic?.let { topic ->
+        CryptoMiniLessonDialog(
+            topic = topic,
+            isPersian = isPersian,
+            onDismiss = { activeLessonTopic = null }
+        )
     }
 
     if (showSkipDialog) {

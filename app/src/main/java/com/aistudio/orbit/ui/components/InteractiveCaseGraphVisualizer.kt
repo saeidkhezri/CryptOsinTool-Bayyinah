@@ -44,6 +44,8 @@ import androidx.compose.ui.unit.sp
 import com.aistudio.orbit.forensics.graph.EntityFilterMode
 import com.aistudio.orbit.forensics.graph.ForensicCaseGraphEngine
 import com.aistudio.orbit.model.*
+import com.aistudio.orbit.ui.components.designsystem.ForensicEpistemicBadge
+import com.aistudio.orbit.ui.components.designsystem.ForensicEpistemicType
 import kotlin.math.*
 
 /**
@@ -852,30 +854,22 @@ private fun NodeInspectorCard(
             }
 
             // Epistemic Demarcation Badge
-            Surface(
-                shape = RoundedCornerShape(6.dp),
-                color = Color(0xFF0F172A),
-                border = CardDefaults.outlinedCardBorder().copy(brush = SolidColor(Color(0xFF334155))),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = if (isPersian) "جایگاه معرفت‌شناختی:" else "Epistemic Status:",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = Color(0xFF94A3B8)
-                    )
-                    Text(
-                        text = if (isPersian) node.epistemicStatus.displayNameFa else node.epistemicStatus.displayNameEn,
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = if (node.epistemicStatus == ForensicEpistemicStatus.UNDISPUTED_LEDGER_FACT) Color(0xFF4ADE80) else Color(0xFFFBBF24)
-                    )
-                }
+            val epistemicType = when (node.epistemicStatus) {
+                ForensicEpistemicStatus.UNDISPUTED_LEDGER_FACT -> ForensicEpistemicType.OBSERVED_FACT
+                ForensicEpistemicStatus.EXTERNAL_SOURCE -> ForensicEpistemicType.EXTERNAL_SOURCE
+                ForensicEpistemicStatus.ALGORITHMIC_CALCULATION -> ForensicEpistemicType.CALCULATED
+                ForensicEpistemicStatus.DERIVED_OSINT_INFERENCE -> ForensicEpistemicType.INFERENCE
+                ForensicEpistemicStatus.WORKING_HYPOTHESIS -> ForensicEpistemicType.HYPOTHESIS
+                ForensicEpistemicStatus.INVESTIGATOR_ASSESSMENT -> ForensicEpistemicType.INVESTIGATOR_ASSESSMENT
+                ForensicEpistemicStatus.UNKNOWN -> ForensicEpistemicType.UNKNOWN
             }
+            ForensicEpistemicBadge(
+                type = epistemicType,
+                isPersian = isPersian,
+                source = node.network.name,
+                confidencePercent = node.confidencePercent,
+                modifier = Modifier.fillMaxWidth()
+            )
 
             // Metrics: Balance / Transactions / Degree
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {

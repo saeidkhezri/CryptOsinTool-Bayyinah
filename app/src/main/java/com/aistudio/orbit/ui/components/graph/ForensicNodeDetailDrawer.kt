@@ -27,7 +27,10 @@ import com.aistudio.orbit.forensics.graph.VisualConfidence
 import com.aistudio.orbit.forensics.graph.VisualInvestigationEdge
 import com.aistudio.orbit.forensics.graph.VisualInvestigationNode
 import com.aistudio.orbit.forensics.graph.VisualNodeType
+import com.aistudio.orbit.forensics.graph.EdgeEpistemicStyle
 import com.aistudio.orbit.model.RiskSeverity
+import com.aistudio.orbit.ui.components.designsystem.ForensicEpistemicBadge
+import com.aistudio.orbit.ui.components.designsystem.ForensicEpistemicType
 
 /**
  * Forensic Node / Edge Detail Drawer.
@@ -415,17 +418,20 @@ private fun EdgeDetailContent(
         }
 
         // Epistemic Status & Evidence
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text(
-                text = "${if (isFa) "وضعیت معرفت‌شناختی:" else "Epistemic Status:"} ${edge.epistemicStyle.name}",
-                style = MaterialTheme.typography.bodySmall
-            )
-            Text(
-                text = "${if (isFa) "منبع:" else "Source:"} ${edge.source}",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.primary
-            )
+        val epistemicType = when (edge.epistemicStyle) {
+            EdgeEpistemicStyle.FACT -> ForensicEpistemicType.OBSERVED_FACT
+            EdgeEpistemicStyle.DERIVED -> ForensicEpistemicType.CALCULATED
+            EdgeEpistemicStyle.INFERENCE -> ForensicEpistemicType.INFERENCE
+            EdgeEpistemicStyle.HYPOTHESIS -> ForensicEpistemicType.HYPOTHESIS
+            EdgeEpistemicStyle.CONTESTED, EdgeEpistemicStyle.REJECTED -> ForensicEpistemicType.UNKNOWN
         }
+        ForensicEpistemicBadge(
+            type = epistemicType,
+            isPersian = isFa,
+            source = edge.source,
+            confidencePercent = (edge.confidence.weight * 100).toInt(),
+            modifier = Modifier.fillMaxWidth()
+        )
 
         if (edge.evidenceIds.isNotEmpty()) {
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {

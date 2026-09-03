@@ -663,9 +663,12 @@ object ForensicCaseGraphEngine {
 
             val vConf = when (node.epistemicStatus) {
                 ForensicEpistemicStatus.UNDISPUTED_LEDGER_FACT -> VisualConfidence.CONFIRMED
+                ForensicEpistemicStatus.EXTERNAL_SOURCE -> VisualConfidence.HIGH
                 ForensicEpistemicStatus.ALGORITHMIC_CALCULATION -> VisualConfidence.HIGH
                 ForensicEpistemicStatus.DERIVED_OSINT_INFERENCE -> VisualConfidence.MEDIUM
                 ForensicEpistemicStatus.WORKING_HYPOTHESIS -> VisualConfidence.LOW
+                ForensicEpistemicStatus.INVESTIGATOR_ASSESSMENT -> VisualConfidence.HIGH
+                ForensicEpistemicStatus.UNKNOWN -> VisualConfidence.LOW
             }
 
             VisualInvestigationNode(

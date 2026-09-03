@@ -18,8 +18,15 @@ import kotlinx.serialization.Serializable
 @Serializable
 enum class EpistemicStatus {
     FACT,
+    OBSERVED_FACT,
+    EXTERNAL_SOURCE,
+    CALCULATED,
+    DERIVED_CALCULATION,
+    STATISTICAL_ESTIMATE,
     INFERENCE,
+    ANALYTICAL_INFERENCE,
     HYPOTHESIS,
+    INVESTIGATOR_ASSESSMENT,
     UNKNOWN
 }
 

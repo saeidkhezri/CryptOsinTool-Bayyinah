@@ -37,6 +37,8 @@ import com.aistudio.orbit.model.InvestigationCase
 import com.aistudio.orbit.repository.AppLanguage
 import com.aistudio.orbit.ui.InvestigationViewModel
 import com.aistudio.orbit.ui.components.InteractiveCaseGraphVisualizer
+import com.aistudio.orbit.ui.components.designsystem.ForensicEpistemicBadge
+import com.aistudio.orbit.ui.components.designsystem.ForensicEpistemicType
 import kotlinx.coroutines.launch
 
 /**
@@ -228,17 +230,6 @@ fun InvestigationWorkspaceView(
             deepIdentityCandidates = deepCandidates,
             osintSession = osintSession
         )
-    }
-
-    if (experienceMode == com.aistudio.orbit.model.ExperienceMode.QUICK_CHECK) {
-        QuickCheckView(
-            viewModel = viewModel,
-            investigationCase = investigationCase,
-            isPersian = isFa,
-            onEscalateToGuided = { viewModel.setExperienceMode(com.aistudio.orbit.model.ExperienceMode.GUIDED_INVESTIGATION) },
-            onEscalateToAnalyst = { viewModel.setExperienceMode(com.aistudio.orbit.model.ExperienceMode.ANALYST_WORKSPACE) }
-        )
-        return
     }
 
     if (experienceMode == ExperienceMode.QUICK_CHECK) {
@@ -624,9 +615,23 @@ fun NodeDetailsPanel(node: InteractiveCaseNode?, isFa: Boolean, onClose: () -> U
                 shape = RoundedCornerShape(8.dp),
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
             ) {
-                Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(if (isFa) "وضعیت معرفت‌شناختی: ${node.epistemicStatus.displayNameFa}" else "Epistemic Status: ${node.epistemicStatus.displayNameEn}", fontWeight = FontWeight.Bold)
-                    Text(if (isFa) "ضریب اطمینان: ${node.confidencePercent}%" else "Confidence: ${node.confidencePercent}%")
+                Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    val epistemicType = when (node.epistemicStatus) {
+                        com.aistudio.orbit.model.ForensicEpistemicStatus.UNDISPUTED_LEDGER_FACT -> ForensicEpistemicType.OBSERVED_FACT
+                        com.aistudio.orbit.model.ForensicEpistemicStatus.EXTERNAL_SOURCE -> ForensicEpistemicType.EXTERNAL_SOURCE
+                        com.aistudio.orbit.model.ForensicEpistemicStatus.ALGORITHMIC_CALCULATION -> ForensicEpistemicType.CALCULATED
+                        com.aistudio.orbit.model.ForensicEpistemicStatus.DERIVED_OSINT_INFERENCE -> ForensicEpistemicType.INFERENCE
+                        com.aistudio.orbit.model.ForensicEpistemicStatus.WORKING_HYPOTHESIS -> ForensicEpistemicType.HYPOTHESIS
+                        com.aistudio.orbit.model.ForensicEpistemicStatus.INVESTIGATOR_ASSESSMENT -> ForensicEpistemicType.INVESTIGATOR_ASSESSMENT
+                        com.aistudio.orbit.model.ForensicEpistemicStatus.UNKNOWN -> ForensicEpistemicType.UNKNOWN
+                    }
+                    ForensicEpistemicBadge(
+                        type = epistemicType,
+                        isPersian = isFa,
+                        source = node.network.name,
+                        confidencePercent = node.confidencePercent,
+                        modifier = Modifier.fillMaxWidth()
+                    )
                     
                     if (node.tags.isNotEmpty()) {
                         Text(if (isFa) "تگ‌های منتسب: ${node.tags.joinToString()}" else "Attributed Tags: ${node.tags.joinToString()}")

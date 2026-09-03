@@ -104,10 +104,13 @@ object OsintForensicBridges {
             }
 
             val epistemic = when (event.epistemicStatus) {
-                EpistemicStatus.FACT -> ForensicEpistemicStatus.UNDISPUTED_LEDGER_FACT
-                EpistemicStatus.INFERENCE -> ForensicEpistemicStatus.DERIVED_OSINT_INFERENCE
+                EpistemicStatus.FACT, EpistemicStatus.OBSERVED_FACT -> ForensicEpistemicStatus.UNDISPUTED_LEDGER_FACT
+                EpistemicStatus.EXTERNAL_SOURCE -> ForensicEpistemicStatus.EXTERNAL_SOURCE
+                EpistemicStatus.CALCULATED, EpistemicStatus.DERIVED_CALCULATION, EpistemicStatus.STATISTICAL_ESTIMATE -> ForensicEpistemicStatus.ALGORITHMIC_CALCULATION
+                EpistemicStatus.INFERENCE, EpistemicStatus.ANALYTICAL_INFERENCE -> ForensicEpistemicStatus.DERIVED_OSINT_INFERENCE
                 EpistemicStatus.HYPOTHESIS -> ForensicEpistemicStatus.WORKING_HYPOTHESIS
-                EpistemicStatus.UNKNOWN -> ForensicEpistemicStatus.DERIVED_OSINT_INFERENCE
+                EpistemicStatus.INVESTIGATOR_ASSESSMENT -> ForensicEpistemicStatus.INVESTIGATOR_ASSESSMENT
+                EpistemicStatus.UNKNOWN -> ForensicEpistemicStatus.UNKNOWN
             }
 
             nodes.add(
