@@ -174,61 +174,8 @@ class SanctionsIntelligenceEngine(
         matches.sortedByDescending { it.score }
     }
 
-    /**
-     * Seeds initial official OFAC SDN crypto addresses if table is empty.
-     */
-    suspend fun seedOfacSanctionsIfEmpty() = withContext(Dispatchers.IO) {
-        val count = sanctionDao.getTotalSanctionsCount()
-        if (count == 0) {
-            val defaultSanctions = listOf(
-                SanctionEntity(
-                    sanctionId = "OFAC_SDN_13345_LAZARUS",
-                    datasetSource = "OFAC_SDN",
-                    datasetVersion = "2024.08.15",
-                    schemaType = "CryptoAddress",
-                    primaryName = "Lazarus Group (DPRK Cyber Group)",
-                    primaryNameFa = "گروه سایبری لازاروس (کره شمالی)",
-                    aliasesJson = "[\"APT38\", \"Hidden Cobra\", \"Guardians of Peace\", \"Labyrinth Chollima\"]",
-                    cryptoAddressesJson = "[\"12tkqA9xSo9jQ8YQGE1TcDsQdXuNxBFxJU\", \"115p7UMMngoj1pMvkpHijcRdfJNXj6LrLn\", \"0x098b716b8aaf21512996dc57eb0615e2383e2f96\"]",
-                    program = "CYBER2 / DPRK3",
-                    country = "KP",
-                    effectiveFrom = 1568332800000L,
-                    effectiveTo = null,
-                    isHistorical = false
-                ),
-                SanctionEntity(
-                    sanctionId = "OFAC_SDN_24512_HYDRA",
-                    datasetSource = "OFAC_SDN",
-                    datasetVersion = "2024.08.15",
-                    schemaType = "Company",
-                    primaryName = "Hydra Market Darknet Exchange",
-                    primaryNameFa = "مارکت‌پلیس تاریک هیدرا",
-                    aliasesJson = "[\"Hydra Market\", \"Hydra CEX\"]",
-                    cryptoAddressesJson = "[\"1LNoVToXk2sU1fGzPSt4m57W4e4o9YgXNn\", \"12t9YDPgwioPHQkdAhPQCqqTxztdYtStG2\"]",
-                    program = "RANSOMWARE / CYBER2",
-                    country = "RU",
-                    effectiveFrom = 1649116800000L,
-                    effectiveTo = null,
-                    isHistorical = false
-                ),
-                SanctionEntity(
-                    sanctionId = "OPENSANCTIONS_TORNADO_CASH",
-                    datasetSource = "OPENSANCTIONS_TIER_A",
-                    datasetVersion = "2024.08.10",
-                    schemaType = "CryptoAddress",
-                    primaryName = "Tornado Cash Classic Pool Routers",
-                    primaryNameFa = "قراردادها و استخرهای تورنادو کش",
-                    aliasesJson = "[\"Tornado.cash\", \"Tornado DAO\"]",
-                    cryptoAddressesJson = "[\"0x12d66f87a04a9e220743712ce6d9bb1b5616b8fc\", \"0x47ce0c6ed5b0ce3d3a51fdb1c52dc66a7c3c2936\"]",
-                    program = "FINANCIAL_CRIME_SANCTIONS",
-                    country = "GLOBAL",
-                    effectiveFrom = 1659916800000L,
-                    effectiveTo = null,
-                    isHistorical = false
-                )
-            )
-            sanctionDao.insertSanctions(defaultSanctions)
-        }
+    suspend fun getInstalledRecordsCount(): Int = withContext(Dispatchers.IO) {
+        sanctionDao.getTotalSanctionsCount()
     }
 
     private fun computeFuzzySimilarity(s1: String, s2: String): Float {

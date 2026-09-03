@@ -301,3 +301,385 @@ data class DatasetMetadataEntity(
     val recordCount: Int = 0,
     val isEnabled: Boolean = true
 )
+
+/**
+ * Data Lineage Stage (Prompt 3 §2, Master Instruction §31)
+ * RAW -> NORMALIZED -> DERIVED -> ANALYTICAL -> REVIEWED -> FINALIZED
+ */
+@Serializable
+enum class DataLineageStage {
+    RAW,
+    NORMALIZED,
+    DERIVED,
+    ANALYTICAL,
+    REVIEWED,
+    FINALIZED
+}
+
+/**
+ * Dedicated Room Entity for Investigation runs/records under a Case.
+ */
+@Serializable
+@Entity(
+    tableName = "investigation_records",
+    indices = [Index(value = ["caseId"])],
+    foreignKeys = [
+        ForeignKey(
+            entity = InvestigationCase::class,
+            parentColumns = ["caseId"],
+            childColumns = ["caseId"],
+            onDelete = ForeignKey.CASCADE
+        )
+    ]
+)
+data class InvestigationEntity(
+    @PrimaryKey
+    val investigationId: String,
+    val caseId: String,
+    val title: String,
+    val targetAddress: String,
+    val blockchain: String = "BITCOIN",
+    val mode: String = "GUIDED_INVESTIGATION",
+    val currentState: String = "NOT_STARTED",
+    val lineageStage: DataLineageStage = DataLineageStage.ANALYTICAL,
+    val createdAt: Long = System.currentTimeMillis(),
+    val updatedAt: Long = System.currentTimeMillis()
+)
+
+/**
+ * Dedicated Room Entity for Transaction Inputs (Prompt 3 §1)
+ */
+@Serializable
+@Entity(
+    tableName = "tx_inputs",
+    indices = [
+        Index(value = ["txHash"]),
+        Index(value = ["address"])
+    ]
+)
+data class TxInputEntity(
+    @PrimaryKey
+    val inputId: String,
+    val txHash: String,
+    val inputIndex: Int,
+    val previousTxHash: String = "",
+    val previousOutputIndex: Int = -1,
+    val address: String = "",
+    val amountSat: Long = 0L,
+    val scriptSig: String = "",
+    val sequence: Long = 0L,
+    val lineageStage: DataLineageStage = DataLineageStage.RAW
+)
+
+/**
+ * Dedicated Room Entity for Transaction Outputs (Prompt 3 §1)
+ */
+@Serializable
+@Entity(
+    tableName = "tx_outputs",
+    indices = [
+        Index(value = ["txHash"]),
+        Index(value = ["address"])
+    ]
+)
+data class TxOutputEntity(
+    @PrimaryKey
+    val outputId: String,
+    val txHash: String,
+    val outputIndex: Int,
+    val address: String = "",
+    val amountSat: Long = 0L,
+    val scriptPubKey: String = "",
+    val scriptType: String = "",
+    val isSpent: Boolean = false,
+    val spentByTxHash: String? = null,
+    val lineageStage: DataLineageStage = DataLineageStage.RAW
+)
+
+/**
+ * Dedicated Room Entity for Address Control Clusters (Prompt 3 §1)
+ */
+@Serializable
+@Entity(
+    tableName = "investigation_clusters",
+    indices = [
+        Index(value = ["caseId"]),
+        Index(value = ["primaryAddress"])
+    ]
+)
+data class ClusterEntity(
+    @PrimaryKey
+    val clusterId: String,
+    val caseId: String,
+    val name: String,
+    val primaryAddress: String,
+    val memberAddressesJson: String = "[]",
+    val heuristicRule: String = "COMMON_INPUT_OWNERSHIP",
+    val confidence: Float = 0.9f,
+    val epistemicStatus: EpistemicStatus = EpistemicStatus.ANALYTICAL_INFERENCE,
+    val tagsJson: String = "[]",
+    val parentInputIdsJson: String = "[]",
+    val lineageStage: DataLineageStage = DataLineageStage.ANALYTICAL,
+    val createdAt: Long = System.currentTimeMillis()
+)
+
+/**
+ * Dedicated Room Entity for Verified Real-world / Digital Entities & VASPs (Prompt 3 §1)
+ */
+@Serializable
+@Entity(
+    tableName = "entity_records",
+    indices = [
+        Index(value = ["name"])
+    ]
+)
+data class EntityRecordEntity(
+    @PrimaryKey
+    val entityId: String,
+    val name: String,
+    val nameFa: String = name,
+    val category: String = "VASP", // VASP, EXCHANGE, MIXER, SEIZED, ILLICIT
+    val jurisdiction: String = "GLOBAL",
+    val riskScore: Float = 0.0f,
+    val website: String = "",
+    val tagsJson: String = "[]",
+    val attributionConfidence: Float = 1.0f,
+    val epistemicStatus: EpistemicStatus = EpistemicStatus.EXTERNAL_SOURCE,
+    val sourceProvenanceId: String = "",
+    val lineageStage: DataLineageStage = DataLineageStage.NORMALIZED,
+    val createdAt: Long = System.currentTimeMillis()
+)
+
+/**
+ * Dedicated Room Entity for Directed Relationships & Edges (Prompt 3 §1)
+ */
+@Serializable
+@Entity(
+    tableName = "investigation_relationships",
+    indices = [
+        Index(value = ["caseId"]),
+        Index(value = ["sourceId"]),
+        Index(value = ["targetId"])
+    ]
+)
+data class RelationshipEntity(
+    @PrimaryKey
+    val relationshipId: String,
+    val caseId: String,
+    val sourceId: String,
+    val sourceType: String = "ADDRESS", // ADDRESS, CLUSTER, ENTITY
+    val targetId: String,
+    val targetType: String = "ADDRESS",
+    val relationshipType: String = "TRANSFERRED_VALUE", // TRANSFERRED_VALUE, PEEL_CHAIN, CO_SPEND, DEPOSIT, WITHDRAWAL
+    val totalTransferredSat: Long = 0L,
+    val txCount: Int = 1,
+    val firstSeenTimestamp: Long = 0L,
+    val lastSeenTimestamp: Long = 0L,
+    val confidence: Float = 1.0f,
+    val epistemicStatus: EpistemicStatus = EpistemicStatus.OBSERVED_FACT,
+    val evidenceIdsJson: String = "[]",
+    val parentInputIdsJson: String = "[]",
+    val lineageStage: DataLineageStage = DataLineageStage.DERIVED,
+    val createdAt: Long = System.currentTimeMillis()
+)
+
+/**
+ * Dedicated Room Entity for Source Provenance & Intelligence Lineage (Prompt 3 §1, §2)
+ */
+@Serializable
+@Entity(
+    tableName = "source_provenances",
+    indices = [
+        Index(value = ["sourceId"])
+    ]
+)
+data class SourceProvenanceEntity(
+    @PrimaryKey
+    val sourceId: String,
+    val name: String,
+    val providerType: String = "BLOCKCHAIN_EXPLORER",
+    val sourceUrl: String = "",
+    val datasetVersion: String = "1.0",
+    val license: String = "Open Access",
+    val retrievedAt: Long = System.currentTimeMillis(),
+    val effectiveAt: Long = System.currentTimeMillis(),
+    val confidenceWeight: Float = 1.0f,
+    val isIndependent: Boolean = true,
+    val upstreamSourceId: String? = null,
+    val lineageStage: DataLineageStage = DataLineageStage.RAW
+)
+
+/**
+ * Dedicated Room Entity for Formal Working Hypotheses (Prompt 3 §1, Master Instruction §42)
+ */
+@Serializable
+@Entity(
+    tableName = "investigation_hypotheses",
+    indices = [
+        Index(value = ["caseId"])
+    ]
+)
+data class HypothesisEntity(
+    @PrimaryKey
+    val hypothesisId: String,
+    val caseId: String,
+    val title: String,
+    val titleFa: String = title,
+    val statement: String,
+    val statementFa: String = statement,
+    val status: String = "ACTIVE", // ACTIVE, SUPPORTED, REFUTED, INCONCLUSIVE
+    val confidence: Float = 0.5f,
+    val supportingEvidenceIdsJson: String = "[]",
+    val contradictingEvidenceIdsJson: String = "[]",
+    val neutralEvidenceIdsJson: String = "[]",
+    val createdBy: String = "Forensic Analyst",
+    val updatedBy: String = "Forensic Analyst",
+    val parentInputIdsJson: String = "[]",
+    val lineageStage: DataLineageStage = DataLineageStage.ANALYTICAL,
+    val createdAt: Long = System.currentTimeMillis(),
+    val updatedAt: Long = System.currentTimeMillis()
+)
+
+/**
+ * Dedicated Room Entity for Comprehensive Risk Assessment (Prompt 3 §1, Master Instruction §38)
+ */
+@Serializable
+@Entity(
+    tableName = "risk_assessments",
+    indices = [
+        Index(value = ["caseId"]),
+        Index(value = ["targetId"])
+    ]
+)
+data class RiskAssessmentEntity(
+    @PrimaryKey
+    val assessmentId: String,
+    val caseId: String,
+    val targetType: String = "ADDRESS", // ADDRESS, TRANSACTION, ENTITY
+    val targetId: String,
+    val overallScore: Float = 0.0f,
+    val transactionRisk: Float = 0.0f,
+    val addressRisk: Float = 0.0f,
+    val entityRisk: Float = 0.0f,
+    val exposureRisk: Float = 0.0f,
+    val behavioralRisk: Float = 0.0f,
+    val sanctionsRisk: Float = 0.0f,
+    val osintRisk: Float = 0.0f,
+    val contributingIndicatorsJson: String = "[]",
+    val epistemicStatus: EpistemicStatus = EpistemicStatus.CALCULATED,
+    val parentInputIdsJson: String = "[]",
+    val lineageStage: DataLineageStage = DataLineageStage.DERIVED,
+    val assessedAt: Long = System.currentTimeMillis()
+)
+
+/**
+ * Dedicated Room Entity for Crime Typologies and Behavioral Patterns (Prompt 3 §1, Master Instruction §18, §19)
+ */
+@Serializable
+@Entity(
+    tableName = "behavioral_patterns",
+    indices = [
+        Index(value = ["caseId"]),
+        Index(value = ["category"])
+    ]
+)
+data class BehavioralPatternEntity(
+    @PrimaryKey
+    val patternId: String,
+    val caseId: String,
+    val patternName: String,
+    val patternNameFa: String = patternName,
+    val category: String, // MONEY_LAUNDERING, STRUCTURING, PEEL_CHAIN, MIXER_EXPOSURE, RAPID_MOVEMENT
+    val severity: String = "MEDIUM",
+    val indicatorsJson: String = "[]",
+    val matchedAddressesJson: String = "[]",
+    val matchedTxsJson: String = "[]",
+    val supportingEvidenceIdsJson: String = "[]",
+    val contradictingEvidenceIdsJson: String = "[]",
+    val confidence: Float = 0.85f,
+    val epistemicStatus: EpistemicStatus = EpistemicStatus.ANALYTICAL_INFERENCE,
+    val parentInputIdsJson: String = "[]",
+    val lineageStage: DataLineageStage = DataLineageStage.ANALYTICAL,
+    val detectedAt: Long = System.currentTimeMillis()
+)
+
+/**
+ * Dedicated Room Entity for OSINT Observations (Prompt 3 §1)
+ */
+@Serializable
+@Entity(
+    tableName = "osint_observations",
+    indices = [
+        Index(value = ["caseId"]),
+        Index(value = ["targetQuery"])
+    ]
+)
+data class OsintObservationEntity(
+    @PrimaryKey
+    val observationId: String,
+    val caseId: String,
+    val targetQuery: String,
+    val targetType: String = "CRYPTO_ADDRESS", // CRYPTO_ADDRESS, DOMAIN, IP, EMAIL, PHONE, ALIAS
+    val providerId: String,
+    val domain: String = "",
+    val url: String = "",
+    val title: String = "",
+    val snippet: String = "",
+    val rawJson: String = "{}",
+    val epistemicStatus: EpistemicStatus = EpistemicStatus.EXTERNAL_SOURCE,
+    val parentInputIdsJson: String = "[]",
+    val lineageStage: DataLineageStage = DataLineageStage.RAW,
+    val observedAt: Long = System.currentTimeMillis()
+)
+
+/**
+ * Dedicated Room Entity for Provider Audit Runs & Telemetry (Prompt 3 §1, §5)
+ */
+@Serializable
+@Entity(
+    tableName = "provider_runs",
+    indices = [
+        Index(value = ["providerId"]),
+        Index(value = ["caseId"])
+    ]
+)
+data class ProviderRunEntity(
+    @PrimaryKey
+    val runId: String,
+    val providerId: String,
+    val caseId: String? = null,
+    val queryTarget: String,
+    val status: String = "SUCCESS", // SUCCESS, PARTIAL, FAILED, TIMEOUT, RATE_LIMITED
+    val httpCode: Int = 200,
+    val latencyMs: Long = 0L,
+    val recordsCount: Int = 0,
+    val rawMetadataJson: String = "{}",
+    val ranAt: Long = System.currentTimeMillis()
+)
+
+/**
+ * Dedicated Room Entity for Formal Forensic Reports (Prompt 3 §1, Master Instruction §43)
+ */
+@Serializable
+@Entity(
+    tableName = "investigation_reports",
+    indices = [
+        Index(value = ["caseId"])
+    ]
+)
+data class ReportEntity(
+    @PrimaryKey
+    val reportId: String,
+    val caseId: String,
+    val title: String,
+    val titleFa: String = title,
+    val authorName: String = "Forensic Investigator",
+    val format: String = "PDF", // PDF, JSON, CSV
+    val language: String = "fa", // fa, en
+    val summary: String = "",
+    val findingsCount: Int = 0,
+    val evidenceCount: Int = 0,
+    val checksum: String = "",
+    val isFinalized: Boolean = true,
+    val generatedAt: Long = System.currentTimeMillis()
+)

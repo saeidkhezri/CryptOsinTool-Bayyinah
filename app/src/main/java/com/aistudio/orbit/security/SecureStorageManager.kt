@@ -140,7 +140,7 @@ class SecureStorageManager(context: Context) {
 
     fun getMaskedApiKey(key: String): String {
         if (key.isBlank()) return ""
-        if (key.length <= 8) return "****"
-        return "${key.take(4)}****${key.takeLast(4)}"
+        if (key.length <= 4) return "••••••••"
+        return "••••••••${key.takeLast(4)}"
     }
 }

@@ -71,9 +71,7 @@ class ForensicIntelligenceOrchestrator(
         _pipelineRunning.value = true
 
         try {
-            // Step 0: Ensure local base datasets are seeded
-            tagPackManager.seedDefaultTagPacksIfEmpty()
-            sanctionsEngine.seedOfacSanctionsIfEmpty()
+            // Step 0: Ensure dataset catalog is initialized
             datasetManager.seedCatalogIfEmpty()
             OsintEventBus.clearCase(caseId)
 

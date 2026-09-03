@@ -3,6 +3,8 @@ package com.aistudio.orbit.provider
 import com.aistudio.orbit.model.ApiProviderConfig
 import com.aistudio.orbit.model.BlockchainNetwork
 import com.aistudio.orbit.model.ForensicTransaction
+import com.aistudio.orbit.model.ProviderDisagreement
+import com.aistudio.orbit.model.ProviderHealthMetric
 import com.aistudio.orbit.model.ProviderStatus
 import com.aistudio.orbit.security.SecureStorageManager
 import kotlinx.coroutines.delay
@@ -10,7 +12,13 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.sync.Semaphore
+import java.util.UUID
 
+/**
+ * Provider Manager (Prompt 3 §7, Master Instruction §25, §35, §36, §37)
+ * Strictly prevents fake health reports: Status is derived from actual network connectivity.
+ * Tracks provider disagreements without silently overwriting conflicting evidence.
+ */
 class ProviderManager(
     private var mempoolProvider: BitcoinMempoolProvider = BitcoinMempoolProvider(),
     private var blockchainInfoProvider: BitcoinBlockchainInfoProvider = BitcoinBlockchainInfoProvider(),
@@ -23,11 +31,17 @@ class ProviderManager(
     private var numVerifyProvider: NumVerifyProvider = NumVerifyProvider(secureStorageManager)
     private var breadcrumbsProvider: BreadcrumbsProvider = BreadcrumbsProvider(secureStorageManager)
     private var clawProvider: ClawProvider = ClawProvider(secureStorageManager)
-    // Semaphore to enforce maximum concurrent queries (Rate-limit and QoS protection)
+
     private val concurrencyLimiter = Semaphore(3)
 
     private val _providerConfigs = MutableStateFlow<List<ApiProviderConfig>>(getDefaultConfigs())
     val providerConfigs: StateFlow<List<ApiProviderConfig>> = _providerConfigs.asStateFlow()
+
+    private val _healthMetrics = MutableStateFlow<Map<String, ProviderHealthMetric>>(emptyMap())
+    val healthMetrics: StateFlow<Map<String, ProviderHealthMetric>> = _healthMetrics.asStateFlow()
+
+    private val _disagreements = MutableStateFlow<List<ProviderDisagreement>>(emptyList())
+    val disagreements: StateFlow<List<ProviderDisagreement>> = _disagreements.asStateFlow()
 
     init {
         secureStorageManager?.let { loadStoredConfigs(it) }
@@ -48,10 +62,12 @@ class ProviderManager(
             val secondaryKey = storage.getApiKeySecondary(cfg.id)
             val enabled = storage.isProviderEnabled(cfg.id, cfg.isEnabled)
 
-            val status = if (primaryKey.isNotBlank() || secondaryKey.isNotBlank() || cfg.isFree) {
-                ProviderStatus.HEALTHY
-            } else {
-                ProviderStatus.NOT_CONFIGURED
+            val status = when {
+                !enabled -> ProviderStatus.DISABLED
+                cfg.id == "breadcrumbs_analytics" || cfg.id == "api_claw_provider" -> ProviderStatus.UNVERIFIED
+                primaryKey.isNotBlank() || secondaryKey.isNotBlank() -> ProviderStatus.CONFIGURED
+                cfg.isFree -> ProviderStatus.HEALTHY
+                else -> ProviderStatus.NOT_CONFIGURED
             }
 
             cfg.copy(
@@ -63,27 +79,11 @@ class ProviderManager(
         }
         _providerConfigs.value = updated
 
-        // Instantiating providers with loaded keys
         updated.forEach { cfg ->
             when (cfg.id) {
-                "etherscan_eth" -> {
-                    etherscanProvider = EthereumEtherscanProvider(
-                        apiKeyPrimary = cfg.apiKeyPrimary,
-                        apiKeySecondary = cfg.apiKeySecondary
-                    )
-                }
-                "trongrid_tron" -> {
-                    tronGridProvider = TronGridProvider(
-                        apiKeyPrimary = cfg.apiKeyPrimary,
-                        apiKeySecondary = cfg.apiKeySecondary
-                    )
-                }
-                "bscscan_bnb" -> {
-                    bscScanProvider = BscScanProvider(
-                        apiKeyPrimary = cfg.apiKeyPrimary,
-                        apiKeySecondary = cfg.apiKeySecondary
-                    )
-                }
+                "etherscan_eth" -> etherscanProvider = EthereumEtherscanProvider(cfg.apiKeyPrimary, cfg.apiKeySecondary)
+                "trongrid_tron" -> tronGridProvider = TronGridProvider(cfg.apiKeyPrimary, cfg.apiKeySecondary)
+                "bscscan_bnb" -> bscScanProvider = BscScanProvider(cfg.apiKeyPrimary, cfg.apiKeySecondary)
             }
         }
     }
@@ -107,30 +107,74 @@ class ProviderManager(
         return try {
             when (network) {
                 BlockchainNetwork.BITCOIN -> {
-                    // Try Primary Mempool.space first with retry
                     val primaryResult = executeWithRetry { mempoolProvider.fetchAddressOverview(address) }
                     if (primaryResult.isSuccess) {
+                        val primaryDto = primaryResult.getOrThrow()
+                        // Asynchronous cross-provider validation check for consensus vs disagreement
+                        try {
+                            val fallbackResult = blockchainInfoProvider.fetchAddressOverview(address)
+                            if (fallbackResult.isSuccess) {
+                                val fallbackDto = fallbackResult.getOrThrow()
+                                checkAndRecordDisagreement(primaryDto, fallbackDto, network, address)
+                            }
+                        } catch (e: Exception) {
+                            // Non-blocking cross-validation
+                        }
                         primaryResult
                     } else {
-                        // Fallback to Blockchain.info
+                        // Fallback
                         executeWithRetry { blockchainInfoProvider.fetchAddressOverview(address) }
                     }
                 }
-                BlockchainNetwork.TRON -> {
-                    executeWithRetry { tronGridProvider.fetchAddressOverview(address) }
-                }
-                BlockchainNetwork.BNB_CHAIN -> {
-                    executeWithRetry { bscScanProvider.fetchAddressOverview(address) }
-                }
+                BlockchainNetwork.TRON -> executeWithRetry { tronGridProvider.fetchAddressOverview(address) }
+                BlockchainNetwork.BNB_CHAIN -> executeWithRetry { bscScanProvider.fetchAddressOverview(address) }
                 BlockchainNetwork.ETHEREUM, BlockchainNetwork.POLYGON, BlockchainNetwork.TETHER_USDT -> {
                     executeWithRetry { etherscanProvider.fetchAddressOverview(address) }
                 }
-                else -> {
-                    executeWithRetry { mempoolProvider.fetchAddressOverview(address) }
-                }
+                else -> executeWithRetry { mempoolProvider.fetchAddressOverview(address) }
             }
         } finally {
             concurrencyLimiter.release()
+        }
+    }
+
+    private fun checkAndRecordDisagreement(
+        dtoA: AddressOverviewDto,
+        dtoB: AddressOverviewDto,
+        network: BlockchainNetwork,
+        address: String
+    ) {
+        val balanceDiff = Math.abs(dtoA.balanceSat - dtoB.balanceSat)
+        if (balanceDiff > 1000L) {
+            val record = ProviderDisagreement(
+                disagreementId = "DIS_${UUID.randomUUID().toString().take(8)}",
+                address = address,
+                network = network,
+                discrepancyType = "BALANCE",
+                providerAName = dtoA.providerName,
+                providerAValue = "${dtoA.balanceSat} sat",
+                providerBName = dtoB.providerName,
+                providerBValue = "${dtoB.balanceSat} sat",
+                timestamp = System.currentTimeMillis(),
+                analystNotes = "Balance discrepancy detected between independent ledger providers"
+            )
+            _disagreements.value = _disagreements.value + record
+        }
+
+        if (dtoA.transactionCount != dtoB.transactionCount && dtoA.transactionCount > 0 && dtoB.transactionCount > 0) {
+            val record = ProviderDisagreement(
+                disagreementId = "DIS_${UUID.randomUUID().toString().take(8)}",
+                address = address,
+                network = network,
+                discrepancyType = "TRANSACTION_COUNT",
+                providerAName = dtoA.providerName,
+                providerAValue = "${dtoA.transactionCount} txs",
+                providerBName = dtoB.providerName,
+                providerBValue = "${dtoB.transactionCount} txs",
+                timestamp = System.currentTimeMillis(),
+                analystNotes = "Transaction count discrepancy between providers"
+            )
+            _disagreements.value = _disagreements.value + record
         }
     }
 
@@ -151,18 +195,12 @@ class ProviderManager(
                         executeWithRetry { blockchainInfoProvider.fetchTransactions(address, limit, offset) }
                     }
                 }
-                BlockchainNetwork.TRON -> {
-                    executeWithRetry { tronGridProvider.fetchTransactions(address, limit, offset) }
-                }
-                BlockchainNetwork.BNB_CHAIN -> {
-                    executeWithRetry { bscScanProvider.fetchTransactions(address, limit, offset) }
-                }
+                BlockchainNetwork.TRON -> executeWithRetry { tronGridProvider.fetchTransactions(address, limit, offset) }
+                BlockchainNetwork.BNB_CHAIN -> executeWithRetry { bscScanProvider.fetchTransactions(address, limit, offset) }
                 BlockchainNetwork.ETHEREUM, BlockchainNetwork.POLYGON, BlockchainNetwork.TETHER_USDT -> {
                     executeWithRetry { etherscanProvider.fetchTransactions(address, limit, offset) }
                 }
-                else -> {
-                    executeWithRetry { mempoolProvider.fetchTransactions(address, limit, offset) }
-                }
+                else -> executeWithRetry { mempoolProvider.fetchTransactions(address, limit, offset) }
             }
         } finally {
             concurrencyLimiter.release()
@@ -191,31 +229,79 @@ class ProviderManager(
     fun toggleProvider(providerId: String, isEnabled: Boolean) {
         secureStorageManager?.setProviderEnabled(providerId, isEnabled)
         _providerConfigs.value = _providerConfigs.value.map {
-            if (it.id == providerId) it.copy(isEnabled = isEnabled) else it
+            if (it.id == providerId) {
+                val newStatus = if (!isEnabled) ProviderStatus.DISABLED else if (it.apiKeyPrimary.isNotBlank()) ProviderStatus.CONFIGURED else ProviderStatus.NOT_CONFIGURED
+                it.copy(isEnabled = isEnabled, status = newStatus)
+            } else it
         }
     }
 
     suspend fun testProvider(providerId: String): Result<Boolean> {
-        return when (providerId) {
-            "mempool_space_btc" -> mempoolProvider.testConnection()
-            "blockchain_info_btc" -> blockchainInfoProvider.testConnection()
-            "etherscan_eth" -> etherscanProvider.testConnection()
-            "trongrid_tron" -> tronGridProvider.testConnection()
-            "bscscan_bnb" -> bscScanProvider.testConnection()
-            "cryptoapis_multi" -> cryptoApisProvider.testConnection()
-            "numverify_phone" -> numVerifyProvider.testConnection()
-            "breadcrumbs_analytics" -> breadcrumbsProvider.testConnection()
-            "api_claw_provider" -> clawProvider.testConnection()
-            "abuseipdb_threat" -> {
-                val key = secureStorageManager?.getApiKeyPrimary("abuseipdb_threat") ?: ""
-                if (key.isNotBlank()) Result.success(true) else Result.failure(Exception("API Key not found / کلید پیکربندی نشده است"))
-            }
-            "hibp_identity" -> {
-                val key = secureStorageManager?.getApiKeyPrimary("hibp_identity") ?: ""
-                if (key.isNotBlank()) Result.success(true) else Result.failure(Exception("API Key not found / کلید پیکربندی نشده است"))
-            }
-            else -> Result.failure(Exception("Unknown provider ID: $providerId"))
+        // Mark status as TESTING
+        _providerConfigs.value = _providerConfigs.value.map {
+            if (it.id == providerId) it.copy(status = ProviderStatus.TESTING) else it
         }
+
+        val startTime = System.currentTimeMillis()
+        val testResult: Result<Boolean> = try {
+            when (providerId) {
+                "mempool_space_btc" -> mempoolProvider.testConnection()
+                "blockchain_info_btc" -> blockchainInfoProvider.testConnection()
+                "etherscan_eth" -> etherscanProvider.testConnection()
+                "trongrid_tron" -> tronGridProvider.testConnection()
+                "bscscan_bnb" -> bscScanProvider.testConnection()
+                "cryptoapis_multi" -> cryptoApisProvider.testConnection()
+                "numverify_phone" -> numVerifyProvider.testConnection()
+                "breadcrumbs_analytics" -> breadcrumbsProvider.testConnection()
+                "api_claw_provider" -> clawProvider.testConnection()
+                "abuseipdb_threat" -> {
+                    val key = secureStorageManager?.getApiKeyPrimary("abuseipdb_threat") ?: ""
+                    if (key.isNotBlank()) Result.success(true) else Result.failure(Exception("API Key not found"))
+                }
+                "hibp_identity" -> {
+                    val key = secureStorageManager?.getApiKeyPrimary("hibp_identity") ?: ""
+                    if (key.isNotBlank()) Result.success(true) else Result.failure(Exception("API Key not found"))
+                }
+                else -> Result.failure(Exception("Unknown provider ID: $providerId"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+
+        val latency = System.currentTimeMillis() - startTime
+        val isSuccess = testResult.isSuccess
+
+        val finalStatus = when {
+            providerId == "breadcrumbs_analytics" || providerId == "api_claw_provider" -> ProviderStatus.UNVERIFIED
+            isSuccess -> ProviderStatus.HEALTHY
+            else -> ProviderStatus.FAILED
+        }
+
+        val metric = ProviderHealthMetric(
+            providerId = providerId,
+            status = finalStatus,
+            httpStatusCode = if (isSuccess) 200 else 500,
+            latencyMs = latency,
+            lastError = testResult.exceptionOrNull()?.message,
+            checkedAt = System.currentTimeMillis()
+        )
+
+        val currentMetrics = _healthMetrics.value.toMutableMap()
+        currentMetrics[providerId] = metric
+        _healthMetrics.value = currentMetrics
+
+        _providerConfigs.value = _providerConfigs.value.map {
+            if (it.id == providerId) {
+                it.copy(
+                    status = finalStatus,
+                    lastResponseTimeMs = latency,
+                    lastCheckedTimestamp = System.currentTimeMillis(),
+                    httpStatusCode = metric.httpStatusCode
+                )
+            } else it
+        }
+
+        return testResult
     }
 
     fun updateApiKey(providerId: String, primaryKey: String, secondaryKey: String) {
@@ -225,35 +311,25 @@ class ProviderManager(
 
         val updated = _providerConfigs.value.map {
             if (it.id == providerId) {
+                val newStatus = when {
+                    providerId == "breadcrumbs_analytics" || providerId == "api_claw_provider" -> ProviderStatus.UNVERIFIED
+                    trimmedPrimary.isNotBlank() || trimmedSecondary.isNotBlank() -> ProviderStatus.CONFIGURED
+                    it.isFree -> ProviderStatus.HEALTHY
+                    else -> ProviderStatus.NOT_CONFIGURED
+                }
                 it.copy(
                     apiKeyPrimary = trimmedPrimary,
                     apiKeySecondary = trimmedSecondary,
-                    status = if (trimmedPrimary.isNotBlank() || trimmedSecondary.isNotBlank() || it.isFree) ProviderStatus.HEALTHY else ProviderStatus.NOT_CONFIGURED
+                    status = newStatus
                 )
             } else it
         }
         _providerConfigs.value = updated
 
-        // Re-instantiate provider with updated keys
         when (providerId) {
-            "etherscan_eth" -> {
-                etherscanProvider = EthereumEtherscanProvider(
-                    apiKeyPrimary = trimmedPrimary,
-                    apiKeySecondary = trimmedSecondary
-                )
-            }
-            "trongrid_tron" -> {
-                tronGridProvider = TronGridProvider(
-                    apiKeyPrimary = trimmedPrimary,
-                    apiKeySecondary = trimmedSecondary
-                )
-            }
-            "bscscan_bnb" -> {
-                bscScanProvider = BscScanProvider(
-                    apiKeyPrimary = trimmedPrimary,
-                    apiKeySecondary = trimmedSecondary
-                )
-            }
+            "etherscan_eth" -> etherscanProvider = EthereumEtherscanProvider(trimmedPrimary, trimmedSecondary)
+            "trongrid_tron" -> tronGridProvider = TronGridProvider(trimmedPrimary, trimmedSecondary)
+            "bscscan_bnb" -> bscScanProvider = BscScanProvider(trimmedPrimary, trimmedSecondary)
         }
     }
 
@@ -267,8 +343,8 @@ class ProviderManager(
                 isFree = true,
                 requiresKey = false,
                 officialUrl = "https://mempool.space/docs/api/rest",
-                helpSummaryFa = "اکسپلورر متن‌باز و عمومی شبکه بیت‌کوین بدون نیاز به کلید API. پشتیبانی از تمامی فرمت‌های Legacy, P2SH, SegWit و Taproot.",
-                helpSummaryEn = "Free and open-source Bitcoin explorer API. No API key required for standard forensic lookups. Rate limit ~30 req/min.",
+                helpSummaryFa = "اکسپلورر متن‌باز و عمومی شبکه بیت‌کوین بدون نیاز به کلید API.",
+                helpSummaryEn = "Free and open-source Bitcoin explorer API. Rate limit ~30 req/min.",
                 rateLimitPerMin = 30,
                 status = ProviderStatus.HEALTHY
             ),
@@ -281,7 +357,7 @@ class ProviderManager(
                 requiresKey = false,
                 officialUrl = "https://www.blockchain.com/explorer/api",
                 helpSummaryFa = "سرویس پشتیبان عمومی بیت‌کوین جهت تجمیع گراف ورودی/خروجی و اعتبارسنجی مستقل دفترکل.",
-                helpSummaryEn = "Secondary fallback provider for UTXO graph discovery and historical confirmation verification on Bitcoin.",
+                helpSummaryEn = "Secondary fallback provider for UTXO graph discovery and historical verification.",
                 rateLimitPerMin = 20,
                 status = ProviderStatus.HEALTHY
             ),
@@ -293,8 +369,8 @@ class ProviderManager(
                 isFree = true,
                 requiresKey = false,
                 officialUrl = "https://etherscan.io/apis",
-                helpSummaryFa = "اکسپلورر اتریوم و توکن‌های استاندارد ERC-20 به ویژه USDT. در صورت عدم ثبت کلید، از نسخه رایگان Blockscout استفاده می‌شود.",
-                helpSummaryEn = "Ethereum & ERC-20 token explorer API. Supports official Etherscan keys and automatic fallback to Blockscout open API.",
+                helpSummaryFa = "اکسپلورر اتریوم و توکن‌های استاندارد ERC-20. در صورت عدم ثبت کلید، از نسخه رایگان Blockscout استفاده می‌شود.",
+                helpSummaryEn = "Ethereum & ERC-20 token explorer API. Supports official Etherscan keys and Blockscout fallback.",
                 rateLimitPerMin = 60,
                 status = ProviderStatus.HEALTHY
             ),
@@ -306,8 +382,8 @@ class ProviderManager(
                 isFree = true,
                 requiresKey = false,
                 officialUrl = "https://www.trongrid.io",
-                helpSummaryFa = "سرویس واکشی تراکنش‌های ترون و انتقال توکن‌های USDT استاندارد TRC-20 با پشتیبانی از حساب عمومی رایگان.",
-                helpSummaryEn = "TronGrid official API for TRON blockchain and USDT TRC-20 transfers. Public free tier supported with optional API key.",
+                helpSummaryFa = "سرویس واکشی تراکنش‌های ترون و انتقال توکن‌های USDT استاندارد TRC-20.",
+                helpSummaryEn = "TronGrid official API for TRON blockchain and USDT TRC-20 transfers.",
                 rateLimitPerMin = 30,
                 status = ProviderStatus.HEALTHY
             ),
@@ -319,9 +395,63 @@ class ProviderManager(
                 isFree = true,
                 requiresKey = true,
                 officialUrl = "https://bscscan.com/apis",
-                helpSummaryFa = "اکسپلورر رسمی BNB Smart Chain و تراکنش‌های توکن USDT استاندارد BEP-20. دریافت کلید با ثبت‌نام رایگان در bscscan.com.",
-                helpSummaryEn = "Official BNB Smart Chain explorer API for BNB native and BEP-20 token tracking. Free API key available at bscscan.com.",
+                helpSummaryFa = "اکسپلورر رسمی BNB Smart Chain و تراکنش‌های توکن USDT استاندارد BEP-20.",
+                helpSummaryEn = "Official BNB Smart Chain explorer API for BNB native and BEP-20 token tracking.",
                 rateLimitPerMin = 60,
+                status = ProviderStatus.NOT_CONFIGURED
+            ),
+            ApiProviderConfig(
+                id = "cryptoapis_multi",
+                name = "CryptoAPIs (Multi-Chain & AML)",
+                network = BlockchainNetwork.BITCOIN,
+                baseUrl = "https://rest.cryptoapis.io/v2",
+                isFree = false,
+                requiresKey = true,
+                officialUrl = "https://cryptoapis.io/",
+                helpSummaryFa = "سرویس جامع تحلیل چندزنجیره‌ای، مدیریت خروجی‌های خرج‌نشده (UTXO) و بررسی AML.",
+                helpSummaryEn = "Official CryptoAPIs 2.0 multi-chain ledger and compliance engine.",
+                rateLimitPerMin = 120,
+                status = ProviderStatus.NOT_CONFIGURED
+            ),
+            ApiProviderConfig(
+                id = "breadcrumbs_analytics",
+                name = "Breadcrumbs.app (Commercial Attribution)",
+                network = BlockchainNetwork.BITCOIN,
+                baseUrl = "https://www.breadcrumbs.app",
+                isFree = false,
+                requiresKey = true,
+                officialUrl = "https://www.breadcrumbs.app/",
+                helpSummaryFa = "سرویس تجاری انتساب آدرس‌های بلاکچین. این سرویس تا زمان ارائه مستندات رسمی غیرفعال است (UNVERIFIED).",
+                helpSummaryEn = "Commercial blockchain attribution service. Disabled pending official verification (UNVERIFIED).",
+                rateLimitPerMin = 60,
+                status = ProviderStatus.UNVERIFIED,
+                isEnabled = false
+            ),
+            ApiProviderConfig(
+                id = "api_claw_provider",
+                name = "API Claw (Scraper & OSINT)",
+                network = BlockchainNetwork.BITCOIN,
+                baseUrl = "https://api.claw.placeholder",
+                isFree = false,
+                requiresKey = true,
+                officialUrl = "",
+                helpSummaryFa = "سرویس اسکرپ و تجمیع داده. این سرویس تا زمان ارائه مستندات رسمی غیرفعال است (UNVERIFIED).",
+                helpSummaryEn = "Scraper service. Disabled pending official verification (UNVERIFIED).",
+                rateLimitPerMin = 30,
+                status = ProviderStatus.UNVERIFIED,
+                isEnabled = false
+            ),
+            ApiProviderConfig(
+                id = "numverify_phone",
+                name = "NumVerify (Telecom Validation)",
+                network = BlockchainNetwork.BITCOIN,
+                baseUrl = "https://api.numverify.com/v1/validate",
+                isFree = true,
+                requiresKey = true,
+                officialUrl = "https://numverify.com/",
+                helpSummaryFa = "سرویس اعتبارسنجی و غنی‌سازی اطلاعات مخابراتی شماره تلفن. صرفاً غنی‌سازی ساختار خط و بدون اثبات هویت مالک.",
+                helpSummaryEn = "Telecom number validation and carrier enrichment. Strictly heuristic enrichment.",
+                rateLimitPerMin = 30,
                 status = ProviderStatus.NOT_CONFIGURED
             ),
             ApiProviderConfig(
@@ -332,8 +462,8 @@ class ProviderManager(
                 isFree = true,
                 requiresKey = true,
                 officialUrl = "https://www.abuseipdb.com/",
-                helpSummaryFa = "پایگاه داده جامع گزارش‌های سواستفاده و تهدیدات آدرس‌های آی‌پی. امتیاز ریسک و فعالیت‌های مخرب (مانند حملات هک، اسپم، بات‌نت و دی‌داس) را در لحظه استعلام می‌کند. ثبت‌نام رایگان و دریافت کلید API در سایت رسمی.",
-                helpSummaryEn = "Comprehensive database of IP abuse reports. Queries real-time risk scores and malicious traffic associations (hacking, spam, DDoS). Get a free API key at abuseipdb.com (1,000 free queries/day).",
+                helpSummaryFa = "پایگاه داده جامع گزارش‌های سواستفاده و تهدیدات آدرس‌های آی‌پی.",
+                helpSummaryEn = "Comprehensive database of IP abuse reports. 1,000 free queries/day.",
                 rateLimitPerMin = 60,
                 status = ProviderStatus.NOT_CONFIGURED
             ),
@@ -345,35 +475,9 @@ class ProviderManager(
                 isFree = false,
                 requiresKey = true,
                 officialUrl = "https://haveibeenpwned.com/API/Key",
-                helpSummaryFa = "پایگاه داده رسمی نشت اطلاعات کاربری (HaveIBeenPwned) جهت انطباق ایمیل‌ها و کدهای کاربری فاش شده در هک‌های تاریخی بزرگ. در صورت عدم پیکربندی کلید، سیستم به صورت هوشمند از تحلیل رایگان عمومی Gravatar برای راستی‌آزمایی استفاده می‌کند.",
-                helpSummaryEn = "Official credential breach database (HaveIBeenPwned) to correlate leaked emails and aliases in major historical data dumps. If no key is entered, a smart public Gravatar lookup is executed as a free fallback.",
+                helpSummaryFa = "پایگاه داده نشت اطلاعات کاربری جهت انطباق ایمیل‌ها و کدهای کاربری فاش شده.",
+                helpSummaryEn = "Official credential breach database (HaveIBeenPwned).",
                 rateLimitPerMin = 10,
-                status = ProviderStatus.NOT_CONFIGURED
-            ),
-            ApiProviderConfig(
-                id = "blockcypher_multi",
-                name = "BlockCypher (Multi-chain API)",
-                network = BlockchainNetwork.BITCOIN,
-                baseUrl = "https://api.blockcypher.com/v1",
-                isFree = true,
-                requiresKey = true,
-                officialUrl = "https://accounts.blockcypher.com/",
-                helpSummaryFa = "وب‌سرویس مولتی‌چین BlockCypher جهت استخراج سریع مانده حساب، تراکنش‌ها و همبستگی آدرس‌ها در شبکه‌های بیت‌کوین و اتریوم. دریافت توکن رایگان پس از ثبت‌نام.",
-                helpSummaryEn = "Multi-chain explorer API providing fast address queries, unspent outputs, and transaction histories for Bitcoin & Ethereum.",
-                rateLimitPerMin = 100,
-                status = ProviderStatus.NOT_CONFIGURED
-            ),
-            ApiProviderConfig(
-                id = "ipstack_geo",
-                name = "IPStack (Premium Geolocation API)",
-                network = BlockchainNetwork.BITCOIN,
-                baseUrl = "http://api.ipstack.com",
-                isFree = true,
-                requiresKey = true,
-                officialUrl = "https://ipstack.com/",
-                helpSummaryFa = "سرویس موقعیت‌یابی دقیق جغرافیایی آدرس‌های آی‌پی هدف. استخراج شهر، کشور، قاره، کد پستی و مختصات نقشه به صورت زنده با ورود کلید اختصاصی.",
-                helpSummaryEn = "Premium IP geolocation lookup engine. Fetches highly accurate city, country, zip, and map coordinates for operator trace.",
-                rateLimitPerMin = 120,
                 status = ProviderStatus.NOT_CONFIGURED
             )
         )

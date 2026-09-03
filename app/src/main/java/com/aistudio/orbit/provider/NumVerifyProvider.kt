@@ -9,8 +9,13 @@ import okhttp3.Request
 import org.json.JSONObject
 import java.net.URLEncoder
 
+/**
+ * NumVerify Result (Prompt 3 §10, Master Instruction §29)
+ * Strictly an operator and telecom metadata enrichment record.
+ * MUST NOT be treated as proof of identity ownership.
+ */
 @Serializable
-data class NumVerifyResult(
+data class NumVerifyEnrichmentRecord(
     val valid: Boolean,
     val number: String,
     val localFormat: String = "",
@@ -21,8 +26,11 @@ data class NumVerifyResult(
     val location: String = "",
     val carrier: String = "",
     val lineType: String = "",
-    val providerName: String = "NumVerify Phone Enrichment",
-    val forensicNotice: String = "اطلاعات فوق صرفاً اعتبارسنجی اپراتوری شماره تلفن بوده و به تنهایی اثبات مالکیت یا هویت فرد نمی‌باشد.",
+    val providerName: String = "NumVerify Telecom Enrichment",
+    val epistemicStatus: String = "EXTERNAL_SOURCE",
+    val confidenceMethod: String = "ENRICHMENT_HEURISTIC",
+    val forensicDisclaimerEn: String = "Telecom operator routing and line metadata only. Does NOT establish personal identity ownership.",
+    val forensicDisclaimerFa: String = "اطلاعات فوق صرفاً اعتبارسنجی اپراتوری و ساختار شبکه مخابراتی بوده و به هیچ وجه اثبات مالکیت هویتی شخص نمی‌باشد.",
     val retrievedTimestamp: Long = System.currentTimeMillis()
 )
 
@@ -41,9 +49,9 @@ class NumVerifyProvider(
 
     suspend fun testConnection(): Result<Boolean> = withContext(Dispatchers.IO) {
         val key = getApiKey()
-        if (key.isBlank()) return@withContext Result.failure(IllegalStateException("NumVerify API Key missing"))
+        if (key.isBlank()) return@withContext Result.failure(IllegalStateException("NumVerify API Key is missing or empty"))
 
-        val testUrl = "$baseUrl?access_key=$key&number=14158586273"
+        val testUrl = "$baseUrl?access_key=${key.trim()}&number=14158586273"
         val request = Request.Builder().url(testUrl).get().build()
 
         try {
@@ -51,15 +59,15 @@ class NumVerifyProvider(
                 if (response.isSuccessful) {
                     val bodyStr = response.body?.string() ?: ""
                     val json = JSONObject(bodyStr)
-                    if (json.has("valid") || json.optBoolean("success", false)) {
-                        Result.success(true)
-                    } else if (json.has("error")) {
-                        Result.failure(IllegalStateException(json.optJSONObject("error")?.optString("info") ?: "Auth error"))
+                    if (json.has("error")) {
+                        val errCode = json.optJSONObject("error")?.optInt("code", 0) ?: 0
+                        val errInfo = json.optJSONObject("error")?.optString("info", "Auth error") ?: "Auth error"
+                        Result.failure(IllegalStateException("NumVerify Error ($errCode): $errInfo"))
                     } else {
                         Result.success(true)
                     }
                 } else {
-                    Result.failure(IllegalStateException("HTTP ${response.code}"))
+                    Result.failure(IllegalStateException("NumVerify HTTP ${response.code}"))
                 }
             }
         } catch (e: Exception) {
@@ -67,34 +75,45 @@ class NumVerifyProvider(
         }
     }
 
-    suspend fun validatePhoneNumber(phoneNumber: String): Result<NumVerifyResult> = withContext(Dispatchers.IO) {
+    suspend fun validatePhoneNumber(phoneNumber: String): Result<NumVerifyEnrichmentRecord> = withContext(Dispatchers.IO) {
         val key = getApiKey()
         if (key.isBlank()) {
-            return@withContext Result.failure(IllegalStateException("NumVerify API Key not configured"))
+            return@withContext Result.failure(IllegalStateException("NumVerify API Key is not configured in Settings / کلید NumVerify پیکربندی نشده است"))
         }
 
         val cleanNumber = phoneNumber.replace("[^0-9+]".toRegex(), "")
-        val encodedNum = URLEncoder.encode(cleanNumber, "UTF-8")
-        val url = "$baseUrl?access_key=$key&number=$encodedNum"
+        if (cleanNumber.length < 5) {
+            return@withContext Result.failure(IllegalArgumentException("Invalid phone number format: $phoneNumber"))
+        }
 
+        val encodedNum = URLEncoder.encode(cleanNumber, "UTF-8")
+        val url = "$baseUrl?access_key=${key.trim()}&number=$encodedNum"
         val request = Request.Builder().url(url).get().build()
 
         try {
             client.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) {
-                    return@withContext Result.failure(IllegalStateException("NumVerify HTTP ${response.code}"))
+                    return@withContext Result.failure(IllegalStateException("NumVerify server error HTTP ${response.code}"))
                 }
 
                 val bodyStr = response.body?.string() ?: ""
                 val json = JSONObject(bodyStr)
 
                 if (json.has("error")) {
-                    val errInfo = json.optJSONObject("error")?.optString("info") ?: "Unknown error"
-                    return@withContext Result.failure(IllegalStateException("NumVerify API Error: $errInfo"))
+                    val errObj = json.optJSONObject("error")
+                    val code = errObj?.optInt("code", 0) ?: 0
+                    val info = errObj?.optString("info", "Unknown error") ?: "Unknown error"
+                    val msg = when (code) {
+                        101 -> "Invalid API Key / کلید نامعتبر است"
+                        104 -> "Usage limit reached / سقف اعتبار ماهیانه NumVerify به اتمام رسیده است"
+                        210 -> "No phone number supplied"
+                        else -> info
+                    }
+                    return@withContext Result.failure(IllegalStateException("NumVerify API ($code): $msg"))
                 }
 
                 val valid = json.optBoolean("valid", false)
-                val numRes = NumVerifyResult(
+                val record = NumVerifyEnrichmentRecord(
                     valid = valid,
                     number = json.optString("number", cleanNumber),
                     localFormat = json.optString("local_format", ""),
@@ -107,7 +126,7 @@ class NumVerifyProvider(
                     lineType = json.optString("line_type", "")
                 )
 
-                Result.success(numRes)
+                Result.success(record)
             }
         } catch (e: Exception) {
             Result.failure(e)

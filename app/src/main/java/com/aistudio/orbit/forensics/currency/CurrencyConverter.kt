@@ -149,34 +149,40 @@ object CurrencyConverter {
                 e.printStackTrace()
             }
 
-            // Source 4: Iranian Market Engine (Nobitex / Navasan Rate Benchmark)
-            val iranianRes = ProviderRateResult("Nobitex Market Rate", 96500.0, 2750.0, 1.0, 95200.0)
-            list.add(iranianRes)
-            saveRateToDb(CurrencyPair.BTC_USD, iranianRes.btcUsd, "Nobitex")
-            saveRateToDb(CurrencyPair.USDT_TOMAN, iranianRes.usdToman, "Nobitex")
+            // If real live feeds succeeded, update rates
+            if (list.isNotEmpty()) {
+                _providerResults.value = list
 
-            // If network failed, provide standard benchmark provider entries
-            if (list.size < 2) {
-                val p1 = ProviderRateResult("Primary Market Feed", 96500.0, 2750.0, 1.0, 95000.0)
-                val p2 = ProviderRateResult("Secondary Benchmark Feed", 96480.0, 2748.0, 0.9998, 95150.0)
-                list.add(p1)
-                list.add(p2)
+                val btcRates = list.map { it.btcUsd }.filter { it > 0.0 }
+                val ethRates = list.map { it.ethUsd }.filter { it > 0.0 }
+                val usdtRates = list.map { it.usdtUsd }.filter { it > 0.0 }
+                val tomanRates = list.map { it.usdToman }.filter { it > 0.0 }
+
+                if (btcRates.isNotEmpty()) {
+                    val avgBtc = btcRates.average()
+                    updateRate(CurrencyPair.BTC_USD, avgBtc, PriceRateSource.LIVE_EXPLORER, "Live Provider Consensus (${list.size} feeds)")
+                    if (tomanRates.isNotEmpty()) {
+                        val avgToman = tomanRates.average()
+                        updateRate(CurrencyPair.BTC_TOMAN, avgBtc * avgToman, PriceRateSource.LIVE_EXPLORER, "Consensus Toman Rate")
+                    }
+                }
+                if (ethRates.isNotEmpty()) {
+                    val avgEth = ethRates.average()
+                    updateRate(CurrencyPair.ETH_USD, avgEth, PriceRateSource.LIVE_EXPLORER, "Live Provider Consensus (${list.size} feeds)")
+                }
+                if (usdtRates.isNotEmpty()) {
+                    val avgUsdt = usdtRates.average()
+                    updateRate(CurrencyPair.USDT_USD, avgUsdt, PriceRateSource.LIVE_EXPLORER, "Live Provider Consensus (${list.size} feeds)")
+                }
+                if (tomanRates.isNotEmpty()) {
+                    val avgToman = tomanRates.average()
+                    updateRate(CurrencyPair.USDT_TOMAN, avgToman, PriceRateSource.LIVE_EXPLORER, "Live Toman Rate")
+                }
+            } else {
+                // Per Master Instruction §32 & Prompt 3 §3: Do NOT manufacture fake fallback feeds.
+                // Leave provider results empty to accurately reflect offline / unavailable status.
+                _providerResults.value = emptyList()
             }
-
-            _providerResults.value = list
-
-            // Apply best average live rates
-            val bestBtc = list.map { it.btcUsd }.average()
-            val bestEth = list.map { it.ethUsd }.average()
-            val bestUsdt = list.map { it.usdtUsd }.average()
-            val bestToman = list.map { it.usdToman }.average()
-
-            updateRate(CurrencyPair.BTC_USD, bestBtc, PriceRateSource.LIVE_EXPLORER, "Multi-Source Consensus")
-            updateRate(CurrencyPair.ETH_USD, bestEth, PriceRateSource.LIVE_EXPLORER, "Multi-Source Consensus")
-            updateRate(CurrencyPair.USDT_USD, bestUsdt, PriceRateSource.LIVE_EXPLORER, "Multi-Source Consensus")
-            updateRate(CurrencyPair.BTC_TOMAN, bestBtc * bestToman, PriceRateSource.LIVE_EXPLORER, "Multi-Source Consensus Toman")
-            updateRate(CurrencyPair.ETH_TOMAN, bestEth * bestToman, PriceRateSource.LIVE_EXPLORER, "Multi-Source Consensus Toman")
-            updateRate(CurrencyPair.USDT_TOMAN, bestToman, PriceRateSource.LIVE_EXPLORER, "Multi-Source Consensus Toman")
         }
     }
 

@@ -50,113 +50,21 @@ data class EntityLabelRecord(
  */
 object LabelingModule {
 
-    // Known curated database of addresses, exchange clusters, mixers, and DeFi protocols
-    private val knownEntities: MutableMap<String, EntityLabelRecord> = mutableMapOf(
-        // Binance Hot Wallets
-        "1NDyJtNTjmwk5xPNhjgAMu4HDHigtobu1s" to EntityLabelRecord(
-            address = "1NDyJtNTjmwk5xPNhjgAMu4HDHigtobu1s",
-            network = BlockchainNetwork.BITCOIN,
-            classification = EntityClassificationType.EXCHANGE_HOT_WALLET,
-            entityNameEn = "Binance: Hot Wallet 1",
-            entityNameFa = "صرافی بایننس: کیف‌پول گرم ۱",
-            confidenceScore = 0.98f,
-            confidenceLevel = ConfidenceLevel.DEFINITIVE_FACT,
-            sourceType = LabelSourceType.OFFICIAL_EXCHANGE_REGISTRY,
-            verificationStatus = VerificationStatus.VERIFIED_OFFICIAL,
-            tags = listOf("EXCHANGE", "BINANCE", "HOT_WALLET", "CEX"),
-            notesEn = "Official high-volume withdrawal hot wallet for Binance exchange.",
-            notesFa = "کیف‌پول گرم رسمی صرافی بایننس جهت پردازش برداشت‌های کاربران با حجم بالا."
-        ),
-        "34xp4vRoCGJym3xR7yCVPFHoCNxv4Twseo" to EntityLabelRecord(
-            address = "34xp4vRoCGJym3xR7yCVPFHoCNxv4Twseo",
-            network = BlockchainNetwork.BITCOIN,
-            classification = EntityClassificationType.EXCHANGE_COLD_WALLET,
-            entityNameEn = "Binance: Cold Storage 1",
-            entityNameFa = "صرافی بایننس: ذخیره‌سازی سرد ۱",
-            confidenceScore = 0.99f,
-            confidenceLevel = ConfidenceLevel.DEFINITIVE_FACT,
-            sourceType = LabelSourceType.OFFICIAL_EXCHANGE_REGISTRY,
-            verificationStatus = VerificationStatus.VERIFIED_OFFICIAL,
-            tags = listOf("EXCHANGE", "BINANCE", "COLD_STORAGE", "CUSTODY"),
-            notesEn = "Primary multi-sig cold storage reserve vault for Binance.",
-            notesFa = "خزانه ذخیره‌سازی سرد چندامضایی اصلی صرافی بایننس."
-        ),
-        // Bitfinex Hot Wallet
-        "bc1qgdjqv0av3q56jvd82tkdjpy7gdp9ut8tlqmgrpmv24sq90ecnvqqjwvw97" to EntityLabelRecord(
-            address = "bc1qgdjqv0av3q56jvd82tkdjpy7gdp9ut8tlqmgrpmv24sq90ecnvqqjwvw97",
-            network = BlockchainNetwork.BITCOIN,
-            classification = EntityClassificationType.EXCHANGE_HOT_WALLET,
-            entityNameEn = "Bitfinex: Hot Wallet",
-            entityNameFa = "صرافی بیتفینکس: کیف‌پول گرم",
-            confidenceScore = 0.95f,
-            confidenceLevel = ConfidenceLevel.DEFINITIVE_FACT,
-            sourceType = LabelSourceType.BLOCKCHAIN_EXPLORER_LABEL,
-            verificationStatus = VerificationStatus.VERIFIED_OFFICIAL,
-            tags = listOf("EXCHANGE", "BITFINEX", "HOT_WALLET"),
-            notesEn = "Bitfinex native segwit hot wallet cluster.",
-            notesFa = "خوشه کیف‌پول گرم سگویت بومی صرافی بیتفینکس."
-        ),
-        // Wasabi / CoinJoin Coordinator
-        "bc1qs657upuk700svvd8992j3lq9u8h2f2v0k7e68a3v5s4h2s4l8q8z3u4j2k" to EntityLabelRecord(
-            address = "bc1qs657upuk700svvd8992j3lq9u8h2f2v0k7e68a3v5s4h2s4l8q8z3u4j2k",
-            network = BlockchainNetwork.BITCOIN,
-            classification = EntityClassificationType.MIXER_TUMBLER,
-            entityNameEn = "Wasabi Wallet: CoinJoin Coordinator",
-            entityNameFa = "واسابي والت: هماهنگ‌کننده کوین‌جوین",
-            confidenceScore = 0.92f,
-            confidenceLevel = ConfidenceLevel.HIGH_CONFIDENCE,
-            sourceType = LabelSourceType.COINJOIN_COORDINATOR_SIGNATURE,
-            verificationStatus = VerificationStatus.CROWDSOURCED_CONFIRMED,
-            tags = listOf("MIXER", "COINJOIN", "WASABI", "PRIVACY_PROTOCOL"),
-            notesEn = "Centralized WabiSabi / CoinJoin coordinator address distributing equal-denomination privacy rounds.",
-            notesFa = "آدرس هماهنگ‌کننده راندهای کوین‌جوین واسابی والت با خروجی‌های هم‌ارز جهت ناشناس‌سازی."
-        ),
-        // Ethereum Tornado Cash Router (Mixer)
-        "0xd90e2f925da726b50c4ed8d0fb90ad053324f31b" to EntityLabelRecord(
-            address = "0xd90e2f925da726b50c4ed8d0fb90ad053324f31b",
-            network = BlockchainNetwork.ETHEREUM,
-            classification = EntityClassificationType.MIXER_TUMBLER,
-            entityNameEn = "Tornado.Cash: Router Contract",
-            entityNameFa = "قرارداد روتر تورنادو کش (Tornado.Cash)",
-            confidenceScore = 1.0f,
-            confidenceLevel = ConfidenceLevel.DEFINITIVE_FACT,
-            sourceType = LabelSourceType.SANCTIONS_GOVERNMENT_LIST,
-            verificationStatus = VerificationStatus.VERIFIED_OFFICIAL,
-            tags = listOf("MIXER", "TORNADO_CASH", "OFAC_SANCTIONED", "DEFI_MIXER"),
-            notesEn = "Non-custodial cryptographic mixer smart contract flagged on OFAC SDN sanctions list.",
-            notesFa = "قرارداد هوشمند میکسر رمزنگاری‌شده در شبکه اتریوم که در فهرست تحریم‌های OFAC قرار دارد."
-        ),
-        // Uniswap Universal Router (DeFi)
-        "0x3fc91a3afd70395cd496c647d5a6cc9d4b2b7fad" to EntityLabelRecord(
-            address = "0x3fc91a3afd70395cd496c647d5a6cc9d4b2b7fad",
-            network = BlockchainNetwork.ETHEREUM,
-            classification = EntityClassificationType.SMART_CONTRACT,
-            entityNameEn = "Uniswap: Universal Router",
-            entityNameFa = "صرافی غیرمتمرکز یونی‌سواپ (Uniswap Router)",
-            confidenceScore = 0.99f,
-            confidenceLevel = ConfidenceLevel.DEFINITIVE_FACT,
-            sourceType = LabelSourceType.BLOCKCHAIN_EXPLORER_LABEL,
-            verificationStatus = VerificationStatus.VERIFIED_OFFICIAL,
-            tags = listOf("DEX", "UNISWAP", "DEFI", "SWAP_ROUTER"),
-            notesEn = "Primary swap routing smart contract for Uniswap V2 and V3 decentralized exchange.",
-            notesFa = "قرارداد هوشمند اصلی مسیریابی سواپ در صرافی غیرمتمرکز یونی‌سواپ نسخه ۲ و ۳."
-        ),
-        // Tether USD ERC-20 Token Contract
-        "0xdac17f958d2ee523a2206206994597c13d831ec7" to EntityLabelRecord(
-            address = "0xdac17f958d2ee523a2206206994597c13d831ec7",
-            network = BlockchainNetwork.ETHEREUM,
-            classification = EntityClassificationType.SMART_CONTRACT,
-            entityNameEn = "Tether USD (USDT) Contract",
-            entityNameFa = "قرارداد رسمی تتر (USDT ERC-20)",
-            confidenceScore = 1.0f,
-            confidenceLevel = ConfidenceLevel.DEFINITIVE_FACT,
-            sourceType = LabelSourceType.OFFICIAL_EXCHANGE_REGISTRY,
-            verificationStatus = VerificationStatus.VERIFIED_OFFICIAL,
-            tags = listOf("STABLECOIN", "USDT", "TETHER", "ERC20"),
-            notesEn = "Official Tether USD ERC-20 smart contract token ledger.",
-            notesFa = "قرارداد هوشمند رسمی صدور و انتقال توکن دلار تتر (USDT) در بستر اتریوم."
-        )
-    )
+    // Curated dynamic in-memory cache of addresses, loaded from verified TagPacks or investigator annotations
+    // Per Master Instruction §32 & Prompt 3 §3: No hard-coded production intelligence is embedded.
+    private val knownEntities: MutableMap<String, EntityLabelRecord> = mutableMapOf()
+
+    fun registerCustomLabel(record: EntityLabelRecord) {
+        knownEntities[record.address] = record
+    }
+
+    fun loadLabelsFromDatabase(records: List<EntityLabelRecord>) {
+        records.forEach { knownEntities[it.address] = it }
+    }
+
+    fun clearCache() {
+        knownEntities.clear()
+    }
 
     fun getLabel(address: String): EntityLabelRecord? {
         val directMatch = knownEntities[address]
