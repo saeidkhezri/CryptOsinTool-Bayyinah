@@ -1,0 +1,2 @@
+-keep class com.aistudio.orbit.** { *; }
+-keepattributes *Annotation*,Signature,InnerClasses

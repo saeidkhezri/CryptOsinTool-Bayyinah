@@ -1,11 +1,140 @@
-<div align="center">
+# سامانه «بیِّنة» (Bayyinah Forensic Intelligence Platform)
+## Advanced Crypto Forensics, Blockchain Intelligence, OSINT & Financial Crime Investigation Platform
 
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
+<p align="center">
+  <b>بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</b><br>
+  <i>«لِيَهْلِكَ مَنْ هَلَكَ عَن بَيِّنَةٍ وَيَحْيَىٰ مَنْ حَيَّ عَن بَيِّنَةٍ»</i><br>
+  <b>سامانه کشف علمی جرایم مالی دیجیتال، ردیابی جریان وجوه، هوشمندی منابع باز و ممیزی ادله قضایی</b>
+</p>
 
-  <h1>Built with AI Studio</h2>
+---
 
-  <p>The fastest path from prompt to production with Gemini.</p>
+## ۱. معرفی و فلسفه سامانه (Overview)
 
-  <a href="https://aistudio.google.com/apps">Start building</a>
+**«بیِّنة»** یک پلتفرم حرفه‌ای، ماژولار، ادله‌محور (Evidence-Driven) و قابل بازتولید (Reproducible) برای ردیابی دارایی‌های رمزارزی، ممیزی پولشویی (AML)، کشف شبکه‌های متقلبانه، واکاوی اطلاعات منابع باز (OSINT) و آماده‌سازی مستندات استعلام و ارجاع قضایی است.
 
-</div>
+بر خلاف سامانه‌های اکتشافگر سطحی (Blockchain Explorers) یا اسکریپت‌های تحلیلی قدیمی، «بیِّنة» با پایبندی قاطع به **سند مادر (Master Instruction §1-§46)** و استاندارد تفکیک چهارگانه وضعیت دانش کارشناسی پایه‌ریزی شده است:
+* **FACT (حقیقت قطعی):** داده‌های ثبت‌شده، قابل اثبات و مشاهده‌شده در بلاکچین (نظیر TXID، خروجی‌های UTXO، اندیس‌های قطعی و اثبات رمزنگاری).
+* **INFERENCE (استنتاج تحلیلی):** نتایج حاصل از الگوهای آماری و اکتشافی (Heuristics) مانند فرض چندورودی، تفکیک آدرس‌های پول‌خرد (Change Detection)، و تحلیل گراف.
+* **HYPOTHESIS (فرضیه کارشناسی):** سناریوهای بازسازی‌شده توسط بازپرس یا کارشناس که نیازمند تقاطع‌گیری بیشتر با شواهد مستقل است.
+* **UNKNOWN (اطلاعات مجهول):** عدم وجود داده قطعی که هیچ‌گاه به صورت حدس نادرست در گزارش یا گراف نمایش داده نمی‌شود.
+
+---
+
+## ۲. معماری فنی سامانه (Technical Architecture)
+
+سامانه «بیِّنة» با زبان Kotlin و فریم‌ورک مدرن Jetpack Compose بر روی پلتفرم اندروید توسعه یافته و از معماری Clean و Provider-Based بهره می‌برد:
+
+```text
+┌────────────────────────────────────────────────────────────────────────┐
+│                        Presentation Layer                              │
+│  Jetpack Compose • Material 3 • Velvet Dark & Gold Forensic Theme     │
+│  Dual Localization: RTL (Persian / تقویم جلالی) & LTR (English / UTC)  │
+└──────────────────────────────────┬─────────────────────────────────────┘
+                                   │
+┌──────────────────────────────────▼─────────────────────────────────────┐
+│                 Investigation Workspace & ViewModels                   │
+│   InvestigationEngine • DashboardViewModel • PluggableOsintViewModel   │
+│   Interactive Zoomable Canvas Graph • Real-Time Timeline & Matrix      │
+└──────────────────────────────────┬─────────────────────────────────────┘
+                                   │
+┌──────────────────────────────────▼─────────────────────────────────────┐
+│                       Forensic Domain Core                             │
+│   Canonical Forensic Observation • Provenance Trail • Risk Engine      │
+│   UTXO & Change Analyzer • Peel Chain Detector • Clustering Engine    │
+│   Multi-Source Evidence Correlator • Judicial Subpoena Sealer         │
+└──────────────────────────────────┬─────────────────────────────────────┘
+                                   │
+┌──────────────────────────────────▼─────────────────────────────────────┐
+│                 Provider & Intelligence Adapter Layer                  │
+│   Blockchain Providers: Blockstream (Native), Mempool.space, BlockCypher│
+│   OSINT Providers: DNS-over-HTTPS, RDAP, BGP View, Threat Fox, MISP    │
+│   AI Providers: Google Gemini Pro / Flash Native SDK Integration      │
+│   Offline Fabric: SHA-256 Verified B-Tree / FTS5 Indexed Datasets      │
+└──────────────────────────────────┬─────────────────────────────────────┘
+                                   │
+┌──────────────────────────────────▼─────────────────────────────────────┐
+│                  Data, Storage & Security Layer                        │
+│   Room Database (Type-Safe SQLite) • EncryptedSharedPreferences (AES)  │
+│   Android KeyStore (Master Keys) • Zero Insecure Cloud Backup          │
+│   PdfDocument Native Forensic Exporter (Vector Charts & Embedded Graph)│
+└────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## ۳. قابلیت‌های کلیدی (Core Capabilities)
+
+### الف) واکاوی عمیق تراکنش و دفترکل (Blockchain & UTXO Forensics)
+* **پشتیبانی چندشبکه‌ای:** Bitcoin (BTC)، Ethereum (ETH)، Tron (TRX)، Monero (XMR)، Litecoin (LTC) و شبکه‌های مرتبط.
+* **موتور اکتشافی UTXO:** پیاده‌سازی قواعد Common-Input Heuristic، شناسایی تغییر آدرس (Change Output)، زنجیره‌های لایه‌برداری (Peel Chains) و تراکنش‌های Dusting.
+* **تحلیل زمانی چندبعدی:** تفکیک دقیق زمان بلوک (Block Time)، میانگین زمان گذشته (MTP)، زمان ورود به Mempool و زمان بازیابی محلی، بدون فرض نادرست زمان کاربر.
+
+### ب) هوشمندی منابع باز و بازسازی هویت دیجیتال (OSINT & Attribution)
+* **زنجیره انطباق چندمنبعی:** استعلام زنده و بدون داده ساختگی از DNS-over-HTTPS، سرویس‌های RDAP هویتی، آدرس‌های IP و اطلاعات مسیریابی BGP/ASN.
+* **ماتریس استقلال منابع (Source Independence):** جلوگیری از محاسبه چندباره داده‌های کپی‌شده و ارزیابی عینی ضریب اطمینان (Confidence Assessment).
+* **ثبت شواهد منفی (Negative Evidence):** ثبت و نگهداری مستند عدم تطابق در لیست‌های تحریم یا عدم رصد فعالیت‌های مخرب، جهت جلوگیری از سوگیری ادله.
+
+### ج) گراف تعاملی و تحلیل ارتباطات (Forensic Graph Intelligence)
+* **موتور رندرینگ اختصاصی:** ترسیم بلادرنگ گره‌ها (Addresses, Entities, VASPs, Sanctions, OSINT Identities) و یال‌های جهت‌دار با پهنای متناسب با حجم وجوه و رنگ‌بندی تفکیک سطح ریسک.
+* **تعاملی و واکنش‌گرا:** بزرگ‌نمایی پیوسته، جابه‌جایی، فیلترسازی و استخراج تصویر با وضوح بالا برای گزارش نهایی.
+
+### د) صدور گزارش قضایی و مهر دیجیتال (Judicial Reporting & Evidence Sealer)
+* **موتور PDF نیتیو چندصفحه‌ای:** تولید اسناد استاندارد حقوقی با فونت مناسب فارسی، صفحه‌بندی هوشمند، جداول دینامیک و نمودار گرافیک برداری.
+* **مهر اصالت ادله (Cryptographic Integrity Seal):** محاسبه هش SHA-256 کامل کل پرونده و الحاق فرم استاندارد پیش‌نویس دستور قضایی و توقیف دارایی مطابق با قانون جرائم رایانه‌ای.
+* **فرمت‌های متنوع خروجی:** PDF، JSON Dossier، گزارش متنی خلاصه (TXT) و بسته‌های قابل ممیزی.
+
+### هـ) یکپارچه‌سازی با سامانه MISP و هوش مصنوعی
+* **اتصال استاندارد MISP:** دریافت و ارسال شاخص‌های تهدید (IoC) به عنوان Provider اختصاصی با مدیریت کامل خطای شبکه و خطای احراز هویت.
+* **دستیار هوش مصنوعی (AI Copilot):** اتصال به Google Gemini برای تلخیص پرونده، پیشنهاد فرضیه‌های تحقیق و تحلیل الگوها بدون جایگزین کردن قضاوت کارشناس.
+
+---
+
+## ۴. نیازمندی‌ها و پیش‌نیازهای ساخت (Build Requirements)
+
+* **سیستم‌عامل:** Linux / macOS / Windows
+* **محیط توسعه:** Android Studio Ladybug / Koala یا بالاتر
+* **JDK:** OpenJDK 17 یا بالاتر
+* **Android SDK:**
+  * `compileSdk = 35`
+  * `minSdk = 26` (Android 8.0 Oreo)
+  * `targetSdk = 35` (Android 15)
+* **سیستم بیلد:** Gradle با Kotlin DSL (`build.gradle.kts`)
+
+---
+
+## ۵. تنظیمات امنیتی و کلیدهای دسترسی (Security & API Credentials)
+
+سامانه «بیِّنة» بر اساس سیاست امنیت سازمانی طراحی شده است:
+1. **عدم ذخیره کلیدها در کد:** هیچ کلید API در سورس کد هاردکد نشده است.
+2. **پشتیبانی از مدیریت اسرار:** کلیدهای اختصاصی سرویس‌های اختیاری از طریق پنل تنظیمات داخل اپلیکیشن یا فایل `.env` بارگذاری می‌شوند.
+3. **رمزنگاری در سطح سخت‌افزار:** استفاده از `EncryptedSharedPreferences` مبتنی بر Android KeyStore برای ذخیره کلیدها و توکن‌ها.
+4. **حفاظت از خروج داده:** بک‌آپ خودکار ابری (Android Cloud Backup) و استخراج بدون مجوز داده‌های حساس پرونده در مانیفست مسدود شده است (`android:allowBackup="false"`).
+
+---
+
+## ۶. راهنمای بیلد و اجرا (Compilation & Build)
+
+برای کامپایل و ایجاد بسته اجرایی:
+
+```bash
+# کامپایل پروژه و اطمینان از صحت انواع داده و کاتالوگ وابستگی‌ها
+./gradlew assembleDebug
+
+# اجرای آزمون‌های یکپارچگی روی ماشین مجازی لوکال (JVM)
+./gradlew testDebugUnitTest
+```
+
+---
+
+## ۷. راهنمای کاربری ویژه کارشناسان و بازرسان مالی (Operational Guide)
+
+1. **ایجاد پرونده (New Case):** در بخش ردیابی جدید، شماره کلاسه پرونده، شبکه بلاکچین و آدرس هدف را وارد کنید.
+2. **استعلام دفترکل:** سامانه به صورت خودکار زنجیره تراکنش‌ها و جریان ورودی/خروجی را استخراج و نرمال‌سازی می‌کند.
+3. **ممیزی الگوهای ریسک:** بررسی خودکار انطباق با قواعد پولشویی، تقسیم مبالغ و آدرس‌های عبوری.
+4. **واکاوی OSINT:** استعلام متاداده‌های هویتی، آدرس‌های IP و سوابق سرویس‌های عمومی جهت انتساب نهاد.
+5. **تحلیل در بستر گراف:** چینش بصری جریان وجوه، تفکیک گره‌های مشکوک و تجمیع ادله در پرونده.
+6. **پلمب و صدور گزارش (Seal & Export):** صدور دفترچه رسمی PDF و فرم دستور استعلام قضایی همراه با هش SHA-256 جهت ارائه به مرجع قضایی یا ضابطین.
+
+---
+**پایان سند معرفی و معماری سامانه «بیِّنة»**

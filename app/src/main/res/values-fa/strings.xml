@@ -1,0 +1,13 @@
+<resources>
+    <string name="app_name">بیِّنة</string>
+    <string name="app_title">سامانه جرم‌یابی مالی و تحلیل ادله بیِّنة</string>
+    <string name="app_subtitle">تحلیل، ردیابی و کشف هوشمند جرائم مالی بلاک‌چین</string>
+    <string name="tab_dashboard">پیشخوان</string>
+    <string name="tab_new_investigation">پرونده جدید</string>
+    <string name="tab_cases">بایگانی پرونده‌ها</string>
+    <string name="tab_tasks">وظایف و پیگیری</string>
+    <string name="tab_settings">تنظیمات و API</string>
+    <string name="search_hint">جستجوی آدرس بلاک‌چین، هش تراکنش یا نام پرونده...</string>
+    <string name="cancel_operation">لغو عملیات</string>
+    <string name="operation_running">در حال پردازش عملیات شبکه...</string>
+</resources>

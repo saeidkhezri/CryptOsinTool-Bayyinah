@@ -1,0 +1,13 @@
+<resources>
+    <string name="app_name">بیِّنة</string>
+    <string name="app_title">BAYYINAH</string>
+    <string name="app_subtitle">Crypto Forensics &amp; Evidence Intelligence</string>
+    <string name="tab_dashboard">Dashboard</string>
+    <string name="tab_new_investigation">New Case</string>
+    <string name="tab_cases">Case Archives</string>
+    <string name="tab_tasks">Tasks</string>
+    <string name="tab_settings">API &amp; Settings</string>
+    <string name="search_hint">Search address, TXID, or case name...</string>
+    <string name="cancel_operation">Cancel Operation</string>
+    <string name="operation_running">Operation in progress...</string>
+</resources>
