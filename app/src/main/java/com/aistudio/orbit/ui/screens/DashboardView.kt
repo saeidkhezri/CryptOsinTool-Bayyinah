@@ -410,10 +410,16 @@ fun DashboardView(
                                 modifier = Modifier.fillMaxWidth(),
                                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f))
                             ) {
+                                val stateInfoFlow by viewModel.investigationStateInfo.collectAsState()
                                 val stageInfo = remember(activeCase) { getCaseCompletedStageInfo(case, isPersian) }
-                                val activeNextAction = remember(activeCase) {
-                                    val currentStageEnum = InvestigationStage.values().firstOrNull { it.id == case.activeStageId } ?: InvestigationStage.BLOCKCHAIN_DISCOVERY
-                                    calculateNextBestAction(currentStageEnum, case)
+                                val activeNextAction = stateInfoFlow.nextBestActionDetailed ?: remember(activeCase) {
+                                    com.aistudio.orbit.model.NextBestActionEngine.determineNextBestAction(
+                                        case, 
+                                        hasOsint = case.evidenceLog.any { it.category == com.aistudio.orbit.model.EvidenceCategory.OSINT_INTELLIGENCE },
+                                        hasPatterns = case.matchedPatterns.isNotEmpty(),
+                                        hasRisks = case.riskIndicators.isNotEmpty(),
+                                        hasHypotheses = case.hypotheses.isNotEmpty()
+                                    )
                                 }
 
                                 Row(
@@ -442,7 +448,7 @@ fun DashboardView(
                                             color = MaterialTheme.colorScheme.outline
                                         )
                                         Text(
-                                            text = if (isPersian) activeNextAction.proposalFa else activeNextAction.proposalEn,
+                                            text = if (isPersian) activeNextAction.actionFa else activeNextAction.action,
                                             style = MaterialTheme.typography.bodySmall,
                                             fontWeight = FontWeight.Bold,
                                             color = Color(0xFFFFD54F), // Gold Accent

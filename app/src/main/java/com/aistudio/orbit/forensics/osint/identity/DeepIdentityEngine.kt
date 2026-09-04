@@ -191,8 +191,9 @@ object DeepIdentityEngine {
                 }
                 phoneReconstruction = reconJob.await()
 
-                if (phoneReconstruction?.deAnonymizedPhoneNumber != null) {
-                    parsedPhone = PhoneInfogaEngine.parse(phoneReconstruction!!.deAnonymizedPhoneNumber!!)
+                val reconstructedNumber = phoneReconstruction?.deAnonymizedPhoneNumber
+                if (!reconstructedNumber.isNullOrBlank()) {
+                    parsedPhone = PhoneInfogaEngine.parse(reconstructedNumber)
                 }
             } else if (isPhone) {
                 parsedPhone = PhoneInfogaEngine.parse(clean)
@@ -210,7 +211,8 @@ object DeepIdentityEngine {
 
         // Calculate blended confidence score
         var scoreAcc = 0.50f
-        if (holeheSummary != null && holeheSummary!!.positiveMatchesCount > 0) scoreAcc += 0.15f
+        val holeheMatches = holeheSummary?.positiveMatchesCount ?: 0
+        if (holeheMatches > 0) scoreAcc += 0.15f
         if (ghuntProfile != null) scoreAcc += 0.18f
         if (phoneReconstruction?.deAnonymizedPhoneNumber != null) scoreAcc += 0.12f
         val overallConfidence = scoreAcc.coerceIn(0.20f, 0.98f)

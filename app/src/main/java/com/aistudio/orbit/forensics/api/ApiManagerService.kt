@@ -170,15 +170,32 @@ class ApiManagerService(
         var pingMs: Long = -1
 
         try {
-            val host = java.net.URI(config.baseUrl).host
+            val host = java.net.URI(config.baseUrl).host ?: "google.com"
             val address = java.net.InetAddress.getByName(host)
             val reachable = address.isReachable(2500)
             val elapsed = System.currentTimeMillis() - startTime
-            pingMs = if (elapsed < 10) 42 + (apiId.hashCode() % 35).toLong() else elapsed
-            emitStep(DiagnosticStepId.INTERNET_PING, "بررسی اتصال اینترنت و اندازه‌گیری پینگ (Ping)", "Network Ping & Connectivity", StepStatus.PASSED, "اتصال اینترنت برقرار است ($pingMs ms)", "Network reachable ($pingMs ms)")
+            if (reachable) {
+                pingMs = elapsed
+                emitStep(DiagnosticStepId.INTERNET_PING, "بررسی اتصال اینترنت و اندازه‌گیری پینگ (Ping)", "Network Ping & Connectivity", StepStatus.PASSED, "اتصال اینترنت برقرار است ($pingMs ms)", "Network reachable ($pingMs ms)")
+            } else {
+                emitStep(DiagnosticStepId.INTERNET_PING, "بررسی اتصال اینترنت و اندازه‌گیری پینگ (Ping)", "Network Ping & Connectivity", StepStatus.FAILED, "سرور در دسترس نیست", "Host unreachable")
+                return@withContext ApiComprehensiveDiagnosticResult(
+                    apiId = apiId,
+                    name = config.name,
+                    primaryKey = activeKey,
+                    connectionState = ApiConnectionState.SERVICE_UNAVAILABLE,
+                    guidanceFa = "سرور در دسترس نیست."
+                )
+            }
         } catch (e: Exception) {
-            pingMs = 150 + (Math.abs(apiId.hashCode()) % 100).toLong()
-            emitStep(DiagnosticStepId.INTERNET_PING, "بررسی اتصال اینترنت و اندازه‌گیری پینگ (Ping)", "Network Ping & Connectivity", StepStatus.PASSED, "پاسخ اولیه دریافتی ($pingMs ms)", "Response latency ($pingMs ms)")
+            emitStep(DiagnosticStepId.INTERNET_PING, "بررسی اتصال اینترنت و اندازه‌گیری پینگ (Ping)", "Network Ping & Connectivity", StepStatus.FAILED, "عدم امکان دسترسی به شبکه: ${e.message}", "Network error: ${e.message}")
+            return@withContext ApiComprehensiveDiagnosticResult(
+                apiId = apiId,
+                name = config.name,
+                primaryKey = activeKey,
+                connectionState = ApiConnectionState.SERVICE_UNAVAILABLE,
+                guidanceFa = "خطای اتصال: ${e.message}"
+            )
         }
 
         // Step 2: Region & VPN Restriction Check

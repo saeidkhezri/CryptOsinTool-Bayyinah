@@ -338,146 +338,7 @@ fun VisualRoadmapStrip(
     }
 }
 
-data class NextBestAction(
-    val proposalFa: String,
-    val proposalEn: String,
-    val reasonFa: String,
-    val reasonEn: String,
-    val evidenceFa: String,
-    val evidenceEn: String,
-    val expectedValueFa: String,
-    val expectedValueEn: String,
-    val targetStage: InvestigationStage
-)
 
-fun calculateNextBestAction(
-    stage: InvestigationStage,
-    case: InvestigationCase
-): NextBestAction {
-    return when (stage) {
-        InvestigationStage.START_CASE -> NextBestAction(
-            proposalFa = "اعتبارسنجی آدرس هدف و تعیین شبکه بلاکچین",
-            proposalEn = "Validate target address and detect blockchain network",
-            reasonFa = "آدرس ورودی باید از نظر ساختاری بررسی شده و شبکه بلاکچین آن (مانند بیت‌کوین، اتریوم، ترون) تایید شود.",
-            reasonEn = "The starting lead address must be validated structurally and its network (Bitcoin, Ethereum, TRON) confirmed.",
-            evidenceFa = "آدرس ثبت‌شده: ${case.targetAddress.take(8)}...",
-            evidenceEn = "Registered address: ${case.targetAddress.take(8)}...",
-            expectedValueFa = "تایید صحت آدرس و فعال‌سازی مراحل واکاوی تراکنش‌ها بدون نقص فنی.",
-            expectedValueEn = "Confirming address format sanity and unlocking transaction queries without failures.",
-            targetStage = InvestigationStage.INITIAL_LEAD
-        )
-        InvestigationStage.INITIAL_LEAD -> NextBestAction(
-            proposalFa = "استعلام اطلاعات پایه بلاکچین و وضعیت دارایی‌ها",
-            proposalEn = "Query blockchain details and asset balances",
-            reasonFa = "پس از تایید قالب آدرس، بررسی وضعیت موجودی زنده، توکن‌های تحت مالکیت و تعداد UTXOها گام منطقی است.",
-            reasonEn = "Following format validation, retrieving live balance, held tokens, and UTXO counts is the next logical step.",
-            evidenceFa = "شبکه شناسایی شده: ${case.network.symbol}",
-            evidenceEn = "Detected Network: ${case.network.symbol}",
-            expectedValueFa = "به دست آوردن تراز مالی دقیق و تشخیص حجم انتقال‌ها برای تعیین فرضیات اولیه پرونده.",
-            expectedValueEn = "Establishing precise financial status and volumes to structure starting hypotheses.",
-            targetStage = InvestigationStage.BLOCKCHAIN_DISCOVERY
-        )
-        InvestigationStage.BLOCKCHAIN_DISCOVERY -> NextBestAction(
-            proposalFa = "واکاوی تفصیلی دفترکل تراکنش‌های پرونده",
-            proposalEn = "Analyze detailed transaction ledger",
-            reasonFa = "آدرس هدف دارای ${case.transactions.size} تراکنش است. برای بررسی توالی انتقال‌ها، جریان وجوه تاریخی باید استخراج و دسته‌بندی شود.",
-            reasonEn = "Target address has ${case.transactions.size} transactions. Investigating chronologies, flows, and values is essential.",
-            evidenceFa = "تعداد تراکنش‌های خام ثبت‌شده: ${case.transactions.size}",
-            evidenceEn = "Raw transactions found: ${case.transactions.size}",
-            expectedValueFa = "دستیابی به توالی زمانی تراکنش‌ها، مبالغ دقیق ورودی/خروجی و تفکیک جریان‌های نقدی مشکوک.",
-            expectedValueEn = "Obtaining temporal chronology, clean fiat values, and isolating suspicious fund transfers.",
-            targetStage = InvestigationStage.TRANSACTIONS_LEDGER
-        )
-        InvestigationStage.TRANSACTIONS_LEDGER -> NextBestAction(
-            proposalFa = "ترسیم گراف ارتباطات و خوشه‌بندی کیف‌پول‌ها",
-            proposalEn = "Map transaction flow graph and counterparties",
-            reasonFa = "با وجود ${case.counterparties.size} طرف حساب مستقیم، ساخت گراف روابط برای رهگیری تراکنش‌های تجمیعی و خرد الزامی است.",
-            reasonEn = "With ${case.counterparties.size} direct counterparties, building the link graph is crucial to spot peel chains or pooling.",
-            evidenceFa = "تعداد طرف حساب‌های ثبت‌شده: ${case.counterparties.size}",
-            evidenceEn = "Identified direct counterparties: ${case.counterparties.size}",
-            expectedValueFa = "شناسایی نهادهای میزبان (صرافی‌ها، میکسرها) و خوشه‌بندی آدرس‌های زنجیره‌ای تحت کنترل یک واحد.",
-            expectedValueEn = "Detecting custodian hosts (exchanges, mixers) and grouping multi-addresses owned by same entity.",
-            targetStage = InvestigationStage.RELATED_ADDRESSES
-        )
-        InvestigationStage.RELATED_ADDRESSES -> NextBestAction(
-            proposalFa = "تطبیق رفتاری با قوانین و سناریوهای جرم‌شناختی مالی",
-            proposalEn = "Match flow behaviors against crime typologies",
-            reasonFa = "کیف‌پول مورد بررسی روابط عمیقی دارد. اجرای تطبیق رفتاری به ردیابی الگوهایی چون Peeling Chain و انتقال‌های متوالی کمک می‌کند.",
-            reasonEn = "The target address exhibits dense flow networks. Matching behaviors identifies patterns like Peeling Chains and nested layering.",
-            evidenceFa = "تراکنش‌های فیلترشده آماده تطبیق: ${case.transactions.size} عدد",
-            evidenceEn = "Filtered transactions ready for pattern matching: ${case.transactions.size}",
-            expectedValueFa = "کشف آدرس‌های انتقال تدریجی وجوه (پیلینگ)، ساختار هرمی و تکنیک‌های تطهیر وجه دیجیتال.",
-            expectedValueEn = "Isolating progressive peeling addresses, pyramid hierarchies, and digital layering structures.",
-            targetStage = InvestigationStage.PATTERN_ANALYSIS
-        )
-        InvestigationStage.PATTERN_ANALYSIS -> NextBestAction(
-            proposalFa = "اجرای ردیابی اطلاعات منبع‌باز و اوسینت (OSINT)",
-            proposalEn = "Perform open-source intelligence (OSINT) searches",
-            reasonFa = "تطبیق الگوها شاخص‌هایی را نمایان کرد. با جستجو در منابع وب، انجمن‌ها و سوابق نشت داده، هویت‌های خارج‌زنجیره‌ای را کشف کنید.",
-            reasonEn = "Pattern analysis revealed suspicious clusters. OSINT queries will seek off-chain email/forum/leak metadata correlations.",
-            evidenceFa = "الگوهای فعال و همبستگی رفتاری هم‌راستا",
-            evidenceEn = "Active behaviors and matching correlation matrices",
-            expectedValueFa = "انتساب احتمالی آدرس به ایمیل، تلفن، شناسه مستعار یا وب‌سایت تجاری غیرقانونی.",
-            expectedValueEn = "Attributing address candidates to emails, phone prefixes, aliases, or active darknet illicit portals.",
-            targetStage = InvestigationStage.OSINT_REVIEW
-        )
-        InvestigationStage.OSINT_REVIEW -> NextBestAction(
-            proposalFa = "ارزیابی یکپارچه شاخص‌های ریسک و فرضیه‌سازی",
-            proposalEn = "Assess integrated risk indicators and structure hypotheses",
-            reasonFa = "باید شواهد بلاکچینی را با یافته‌های هویتی اوسینت تلفیق کنیم تا سطح خطر، درگیری در تحریم‌ها و سناریوهای پرونده مشخص شود.",
-            reasonEn = "We must merge on-chain evidence with off-chain OSINT discoveries to quantify regulatory risk and sanction levels.",
-            evidenceFa = "گزارش OSINT و کاندیداهای هویتی همگام‌سازی شده",
-            evidenceEn = "Synchronized OSINT report and candidate identity datasets",
-            expectedValueFa = "رتبه‌بندی دقیق ریسک پرونده و تعریف فرضیه‌های مستند برای بازپرس قضایی.",
-            expectedValueEn = "Formulating precise risk ranking metrics and formalizing forensic hypotheses.",
-            targetStage = InvestigationStage.RISK_REVIEW
-        )
-        InvestigationStage.RISK_REVIEW -> NextBestAction(
-            proposalFa = "مرور جامع و بستن زنجیره ادله دیجیتال",
-            proposalEn = "Audit and lock the digital chain of custody",
-            reasonFa = "برای اثبات نهایی پرونده، تک‌تک مشاهدات (تراکنش‌ها، انتساب‌های OSINT، تگ‌های ریسک) باید بازبینی، ممهور و تایید شوند.",
-            reasonEn = "To guarantee judicial admissibility, each digital finding must be audited, annotated, and added to the custody chain.",
-            evidenceFa = "تعداد ادله ثبت‌شده در پرونده: ${case.evidenceLog.size}",
-            evidenceEn = "Total items in the evidence log: ${case.evidenceLog.size}",
-            expectedValueFa = "ایجاد زنجیره ادله غیرقابل دستکاری و مستدل با مهر اصالت دیجیتال.",
-            expectedValueEn = "Ensuring a tamper-proof and admissibility-ready evidence log with cryptographically sealed integrity.",
-            targetStage = InvestigationStage.EVIDENCE_REVIEW
-        )
-        InvestigationStage.EVIDENCE_REVIEW -> NextBestAction(
-            proposalFa = "ثبت استنباط نهایی و ارزیابی کارشناس فارنزیک",
-            proposalEn = "Record final expert forensic assessment & conclusion",
-            reasonFa = "با آماده بودن زنجیره ادله، ثبت نتیجه کارشناسی رسمی، پاسخ به پرسش‌های مرجع قضایی و فرضیه برگزیده الزامی است.",
-            reasonEn = "With a sealed evidence log, entering the formal expert opinion and judicial summary answers is required.",
-            evidenceFa = "شواهد قطعی ثبت‌شده: ${case.evidenceLog.count { it.confidence == com.aistudio.orbit.model.ConfidenceLevel.DEFINITIVE_FACT }} مورد",
-            evidenceEn = "Definitive evidence items: ${case.evidenceLog.count { it.confidence == com.aistudio.orbit.model.ConfidenceLevel.DEFINITIVE_FACT }}",
-            expectedValueFa = "مستندسازی فرضیه اثبات‌شده کارشناس و آماده‌سازی برای تولید گزارش حقوقی نهایی.",
-            expectedValueEn = "Documenting the proven expert hypothesis to lay the foundation for legal reporting.",
-            targetStage = InvestigationStage.CONCLUSION
-        )
-        InvestigationStage.CONCLUSION -> NextBestAction(
-            proposalFa = "صدور و استخراج گزارش فنی رسمی (PDF/CSV)",
-            proposalEn = "Generate and export official forensic report (PDF/CSV)",
-            reasonFa = "پرونده تکمیل شده است. زمان تولید گزارش مکتوب فارسی/انگلیسی با فرمت استاندارد به همراه فلوچارت‌های تراکنشی و گواهینامه است.",
-            reasonEn = "Investigation is completed. The final step is exporting the standardized bilingual court-ready PDF report with charts and seals.",
-            evidenceFa = "خلاصه پرونده، ارزیابی کارشناس و زنجیره ادله ممهور",
-            evidenceEn = "Validated summaries, expert assessments, and sealed custody records",
-            expectedValueFa = "دریافت سند مکتوب قابل ارائه به مراجع قانونی جهت پیگیری حقوقی و توقیف دارایی‌ها.",
-            expectedValueEn = "Obtaining a bilingual signed export dossier suitable for judicial asset-recovery mandates.",
-            targetStage = InvestigationStage.REPORT
-        )
-        InvestigationStage.REPORT -> NextBestAction(
-            proposalFa = "آرشیو پرونده و ذخیره‌سازی سوابق",
-            proposalEn = "Archive case and lock evidence",
-            reasonFa = "گزارش صادر شده است. برای حفظ حریم خصوصی کارفرما و رعایت اصول فارنزیک، اطلاعات پرونده را در پایگاه داده محلی تثبیت کنید.",
-            reasonEn = "Reports are generated. For privacy and compliance, seal the investigation record in the local database.",
-            evidenceFa = "گزارش صادر شده پرونده در حافظه محلی",
-            evidenceEn = "Generated report file metadata located in local storage",
-            expectedValueFa = "آرشیو پرونده با قابلیت استعلام و بازیابی مجدد سوابق ردیابی.",
-            expectedValueEn = "Safe archival of the case dossier, preserving historic timelines for quick subpoena lookups.",
-            targetStage = InvestigationStage.REPORT
-        )
-    }
-}
 
 fun getStageLessonTopic(stage: InvestigationStage): MiniLessonTopic {
     return when (stage) {
@@ -578,7 +439,15 @@ fun GuideStageTemplate(
     content: @Composable () -> Unit
 ) {
     val strings = AppLocalization.getStrings(if (isPersian) AppLanguage.PERSIAN else AppLanguage.ENGLISH)
-    val nextAction = remember(stage, case) { calculateNextBestAction(stage, case) }
+    val nextAction = remember(stage, case) { 
+        com.aistudio.orbit.model.NextBestActionEngine.determineNextBestAction(
+            case,
+            hasOsint = case.evidenceLog.any { it.category == com.aistudio.orbit.model.EvidenceCategory.OSINT_INTELLIGENCE },
+            hasPatterns = false,
+            hasRisks = false,
+            hasHypotheses = false
+        )
+    }
     var skipReasonText by remember { mutableStateOf("") }
     var showSkipDialog by remember { mutableStateOf(false) }
     var isFullDetailExpanded by remember { mutableStateOf(false) }
@@ -944,13 +813,13 @@ fun GuideStageTemplate(
                 }
 
                 Text(
-                    text = if (isPersian) nextAction.proposalFa else nextAction.proposalEn,
+                    text = if (isPersian) nextAction.actionFa else nextAction.action,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
 
                 Text(
-                    text = if (isPersian) nextAction.reasonFa else nextAction.reasonEn,
+                    text = if (isPersian) nextAction.reasonFa else nextAction.reason,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -966,7 +835,7 @@ fun GuideStageTemplate(
                             color = MaterialTheme.colorScheme.outline
                         )
                         Text(
-                            text = if (isPersian) nextAction.evidenceFa else nextAction.evidenceEn,
+                            text = if (isPersian) "تعداد شواهد پشتیبان: ${nextAction.supportingEvidenceCount}" else "Supporting Evidence Count: ${nextAction.supportingEvidenceCount}",
                             style = MaterialTheme.typography.bodySmall,
                             fontWeight = FontWeight.Bold
                         )
@@ -979,7 +848,7 @@ fun GuideStageTemplate(
                             color = MaterialTheme.colorScheme.outline
                         )
                         Text(
-                            text = if (isPersian) nextAction.expectedValueFa else nextAction.expectedValueEn,
+                            text = if (isPersian) nextAction.expectedInvestigativeValueFa else nextAction.expectedInvestigativeValue,
                             style = MaterialTheme.typography.bodySmall,
                             color = Color(0xFF10B981),
                             fontWeight = FontWeight.Bold
@@ -988,7 +857,7 @@ fun GuideStageTemplate(
                 }
 
                 Button(
-                    onClick = { onNavigateNext(nextAction.targetStage) },
+                    onClick = { onNavigateNext(InvestigationStage.values().firstOrNull { it.name == nextAction.targetStage } ?: InvestigationStage.BLOCKCHAIN_DISCOVERY) },
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                     shape = RoundedCornerShape(8.dp)

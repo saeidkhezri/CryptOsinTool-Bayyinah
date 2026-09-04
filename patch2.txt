@@ -1,5 +1,0 @@
-    val osintSession by viewModel.osintSession.collectAsState()
-
-    val experienceMode by viewModel.experienceMode.collectAsState()
-
-    var currentStage by remember { mutableStateOf(InvestigationStage.BLOCKCHAIN_DISCOVERY) }

@@ -93,7 +93,7 @@ data class ProvenanceRecord(
     val dataHashOrFingerprint: String? = null,
     val transformationPipeline: List<String> = emptyList(),
     val rawPayloadExcerpt: String? = null,
-    val analystUsername: String? = "System Auditor",
+    val analystUsername: String? = null,
     val providerId: String = "mempool_space_btc",
     val providerName: String = sourceName,
     val endpointQuery: String = endpointUrl ?: "",

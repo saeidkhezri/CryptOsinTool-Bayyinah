@@ -84,29 +84,7 @@ fun InvestigationWorkspaceView(
     val osintSession by viewModel.osintSession.collectAsState()
 
     val experienceMode by viewModel.experienceMode.collectAsState()
-
-    val stageStatuses = remember(investigationCase, osintReport, deepCandidates) {
-        val hasTransactions = investigationCase.transactions.isNotEmpty()
-        val hasCounterparties = investigationCase.counterparties.isNotEmpty()
-        val hasPatterns = investigationCase.matchedPatterns.isNotEmpty()
-        val hasOsint = osintReport != null
-        val hasRisks = investigationCase.riskIndicators.isNotEmpty()
-        val hasEvidence = investigationCase.evidenceLog.isNotEmpty()
-        val hasHypotheses = investigationCase.hypotheses.isNotEmpty()
-        mapOf(
-            InvestigationStage.START_CASE to StageStatus.COMPLETED,
-            InvestigationStage.INITIAL_LEAD to StageStatus.COMPLETED,
-            InvestigationStage.BLOCKCHAIN_DISCOVERY to if (hasTransactions) StageStatus.COMPLETED else StageStatus.CURRENT,
-            InvestigationStage.TRANSACTIONS_LEDGER to when { hasCounterparties -> StageStatus.COMPLETED; hasTransactions -> StageStatus.CURRENT; else -> StageStatus.AVAILABLE },
-            InvestigationStage.RELATED_ADDRESSES to when { hasPatterns -> StageStatus.COMPLETED; hasCounterparties -> StageStatus.CURRENT; hasTransactions -> StageStatus.AVAILABLE; else -> StageStatus.LOCKED },
-            InvestigationStage.PATTERN_ANALYSIS to when { hasOsint -> StageStatus.COMPLETED; hasPatterns -> StageStatus.CURRENT; hasCounterparties -> StageStatus.AVAILABLE; else -> StageStatus.LOCKED },
-            InvestigationStage.OSINT_REVIEW to when { hasRisks -> StageStatus.COMPLETED; hasOsint -> StageStatus.CURRENT; hasPatterns -> StageStatus.AVAILABLE; else -> StageStatus.LOCKED },
-            InvestigationStage.RISK_REVIEW to when { hasEvidence -> StageStatus.COMPLETED; hasRisks -> StageStatus.CURRENT; hasOsint -> StageStatus.AVAILABLE; else -> StageStatus.LOCKED },
-            InvestigationStage.EVIDENCE_REVIEW to when { hasHypotheses -> StageStatus.COMPLETED; hasEvidence -> StageStatus.CURRENT; hasRisks -> StageStatus.AVAILABLE; else -> StageStatus.LOCKED },
-            InvestigationStage.CONCLUSION to when { hasHypotheses -> StageStatus.CURRENT; hasEvidence -> StageStatus.AVAILABLE; else -> StageStatus.LOCKED },
-            InvestigationStage.REPORT to if (hasEvidence) StageStatus.AVAILABLE else StageStatus.LOCKED
-        )
-    }
+    val stageStatuses by viewModel.stageStatuses.collectAsState()
     val currentStage = remember(investigationCase.caseId, investigationCase.activeStageId) {
         InvestigationStage.values().firstOrNull { it.id == investigationCase.activeStageId } ?: InvestigationStage.BLOCKCHAIN_DISCOVERY
     }

@@ -93,7 +93,7 @@ object AddressValidator {
         }
 
         // 4. Check Solana format
-        if (SOLANA_BASE58_REGEX.matches(trimmed) && trimmed.length >= 32 && trimmed.length <= 44 && !trimmed.startsWith("1") && !trimmed.startsWith("3")) {
+        if (SOLANA_BASE58_REGEX.matches(trimmed) && trimmed.length >= 32 && trimmed.length <= 44) {
             return AddressValidationResult(
                 isValid = true,
                 network = BlockchainNetwork.SOLANA,

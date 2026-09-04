@@ -51,8 +51,8 @@ fun AiCopilotView(
     val promptQueue by viewModel.aiCopilotPromptQueue.collectAsState()
     
     LaunchedEffect(promptQueue) {
-        if (promptQueue != null) {
-            inputText = promptQueue!!
+        promptQueue?.let { queuedPrompt ->
+            inputText = queuedPrompt
             viewModel.setAiCopilotPromptQueue(null)
         }
     }

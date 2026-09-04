@@ -43,7 +43,7 @@ data class ForensicResourceLed(
     val isOnline: Boolean = true,
     val isConnected: Boolean = true,
     val isLocal: Boolean = false,
-    val pingMs: Long = 28
+    val pingMs: Long? = null
 )
 
 data class ForensicSubTask(
@@ -453,7 +453,7 @@ private fun PhosphorLedBadge(
                 text = if (led.isLocal) {
                     if (isPersian) "محلی / رمزنگاری Room" else "Local / Room DB"
                 } else {
-                    "${if (isPersian) "برخط" else "Online"} • ${led.pingMs}ms"
+                    if (led.pingMs != null) "${if (isPersian) "برخط" else "Online"} • ${led.pingMs}ms" else if (isPersian) "متصل" else "Connected"
                 },
                 style = MaterialTheme.typography.labelSmall,
                 fontSize = 9.sp,

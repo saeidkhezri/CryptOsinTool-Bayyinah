@@ -42,6 +42,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.util.UUID
@@ -228,6 +229,30 @@ class InvestigationViewModel(application: Application) : AndroidViewModel(applic
     private val _osintReport = MutableStateFlow<OsintAnalysisReport?>(null)
     val osintReport: StateFlow<OsintAnalysisReport?> = _osintReport.asStateFlow()
 
+    val investigationStateInfo: StateFlow<InvestigationStateInfo> = combine(
+        _activeCase,
+        _osintReport,
+        _patternMatches
+    ) { case, osint, patterns ->
+        val hasOsint = osint != null || (case?.evidenceLog?.any { it.category == EvidenceCategory.OSINT_INTELLIGENCE } == true)
+        val hasPatterns = patterns.isNotEmpty() || (case?.matchedPatterns?.isNotEmpty() == true)
+        val hasRisks = case?.riskIndicators?.isNotEmpty() == true
+        val hasHypotheses = case?.hypotheses?.isNotEmpty() == true
+        InvestigationStateMachine.determineState(case, hasOsint, hasPatterns, hasRisks, hasHypotheses)
+    }.stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.Eagerly, InvestigationStateMachine.determineState(null, false, false, false, false))
+
+    val stageStatuses: StateFlow<Map<com.aistudio.orbit.ui.screens.InvestigationStage, com.aistudio.orbit.ui.screens.StageStatus>> = combine(
+        _activeCase,
+        _osintReport,
+        _patternMatches
+    ) { case, osint, patterns ->
+        val hasOsint = osint != null || (case?.evidenceLog?.any { it.category == EvidenceCategory.OSINT_INTELLIGENCE } == true)
+        val hasPatterns = patterns.isNotEmpty() || (case?.matchedPatterns?.isNotEmpty() == true)
+        val hasRisks = case?.riskIndicators?.isNotEmpty() == true
+        val hasHypotheses = case?.hypotheses?.isNotEmpty() == true
+        InvestigationStateMachine.calculateStageStatuses(case, hasOsint, hasPatterns, hasRisks, hasHypotheses)
+    }.stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.Eagerly, InvestigationStateMachine.calculateStageStatuses(null, false, false, false, false))
+
     // On-Chain to Off-Chain OSINT Handoff Pipeline States
     private val _extractedOnChainEntity = MutableStateFlow<OnChainEntity?>(null)
     val extractedOnChainEntity: StateFlow<OnChainEntity?> = _extractedOnChainEntity.asStateFlow()
@@ -397,10 +422,10 @@ class InvestigationViewModel(application: Application) : AndroidViewModel(applic
             val user = AuthManager.currentUser.value?.username ?: "Anonymous"
 
             val leds = listOf(
-                com.aistudio.orbit.ui.components.ForensicResourceLed("node", "${network.displayName} RPC Node", "نود شبکه ${network.displayName}", isOnline = true, isConnected = true, pingMs = 32),
-                com.aistudio.orbit.ui.components.ForensicResourceLed("room", "Room SQLite Cache DB", "پایگاه داده محلی Room", isOnline = false, isLocal = true, isConnected = true, pingMs = 2),
-                com.aistudio.orbit.ui.components.ForensicResourceLed("osint", "OSINT Threat Intel Hub", "هاب اطلاعات تهدیدات اوسینت", isOnline = true, isConnected = true, pingMs = 45),
-                com.aistudio.orbit.ui.components.ForensicResourceLed("rates", "Historical Forex Rates", "مرجع تسعیر تاریخی ریال/دلار", isOnline = true, isConnected = true, pingMs = 18)
+                com.aistudio.orbit.ui.components.ForensicResourceLed("node", "${network.displayName} RPC Node", "نود شبکه ${network.displayName}", isOnline = true, isConnected = true, pingMs = null),
+                com.aistudio.orbit.ui.components.ForensicResourceLed("room", "Room SQLite Cache DB", "پایگاه داده محلی Room", isOnline = false, isLocal = true, isConnected = true, pingMs = null),
+                com.aistudio.orbit.ui.components.ForensicResourceLed("osint", "OSINT Threat Intel Hub", "هاب اطلاعات تهدیدات اوسینت", isOnline = true, isConnected = true, pingMs = null),
+                com.aistudio.orbit.ui.components.ForensicResourceLed("rates", "Historical Forex Rates", "مرجع تسعیر تاریخی ریال/دلار", isOnline = true, isConnected = true, pingMs = null)
             )
 
             var subtasks = listOf(

@@ -38,7 +38,12 @@ data class NextBestAction(
     val confidence: Int,
     val costImplication: String,
     val actionCode: String = "",
-    val isBlocked: Boolean = false
+    val isBlocked: Boolean = false,
+    val actionFa: String = action,
+    val reasonFa: String = reason,
+    val expectedInvestigativeValueFa: String = expectedInvestigativeValue,
+    val requiredInputFa: String = requiredInput,
+    val costImplicationFa: String = costImplication
 )
 
 data class InvestigationStateInfo(
@@ -128,5 +133,87 @@ object InvestigationStateMachine {
             }
         }
         return InvestigationStateInfo(state, reason, available, emptyList(), missing, evidence, state.confidence, action.action, action)
+    }
+
+    fun calculateStageStatuses(
+        case: InvestigationCase?,
+        hasOsint: Boolean,
+        hasPatterns: Boolean,
+        hasRisks: Boolean,
+        hasHypotheses: Boolean
+    ): Map<com.aistudio.orbit.ui.screens.InvestigationStage, com.aistudio.orbit.ui.screens.StageStatus> {
+        val targetStage = case?.activeStageId ?: 1
+        val hasAddress = !case?.targetAddress.isNullOrBlank()
+        val hasTransactions = (case?.transactions?.isNotEmpty() == true) || (case?.totalTransactionsFound ?: 0) > 0
+        val hasCounterparties = case?.counterparties?.isNotEmpty() == true
+        val hasEvidence = case?.evidenceLog?.isNotEmpty() == true
+        val isFailed = case?.status == InvestigationStatus.FAILED
+
+        fun statusFor(stage: com.aistudio.orbit.ui.screens.InvestigationStage, isCompleted: Boolean, isAvailable: Boolean): com.aistudio.orbit.ui.screens.StageStatus {
+            return when {
+                stage.id == targetStage -> if (isFailed) com.aistudio.orbit.ui.screens.StageStatus.FAILED else com.aistudio.orbit.ui.screens.StageStatus.CURRENT
+                isCompleted -> com.aistudio.orbit.ui.screens.StageStatus.COMPLETED
+                isAvailable -> com.aistudio.orbit.ui.screens.StageStatus.AVAILABLE
+                else -> com.aistudio.orbit.ui.screens.StageStatus.LOCKED
+            }
+        }
+
+        return mapOf(
+            com.aistudio.orbit.ui.screens.InvestigationStage.START_CASE to statusFor(
+                com.aistudio.orbit.ui.screens.InvestigationStage.START_CASE,
+                isCompleted = hasAddress,
+                isAvailable = true
+            ),
+            com.aistudio.orbit.ui.screens.InvestigationStage.INITIAL_LEAD to statusFor(
+                com.aistudio.orbit.ui.screens.InvestigationStage.INITIAL_LEAD,
+                isCompleted = hasAddress && com.aistudio.orbit.forensics.AddressValidator.validate(case?.targetAddress ?: "", case?.network ?: BlockchainNetwork.BITCOIN).isValid,
+                isAvailable = hasAddress
+            ),
+            com.aistudio.orbit.ui.screens.InvestigationStage.BLOCKCHAIN_DISCOVERY to statusFor(
+                com.aistudio.orbit.ui.screens.InvestigationStage.BLOCKCHAIN_DISCOVERY,
+                isCompleted = hasTransactions || (case?.status == InvestigationStatus.COMPLETED || case?.status == InvestigationStatus.PARTIALLY_COMPLETED),
+                isAvailable = hasAddress
+            ),
+            com.aistudio.orbit.ui.screens.InvestigationStage.TRANSACTIONS_LEDGER to statusFor(
+                com.aistudio.orbit.ui.screens.InvestigationStage.TRANSACTIONS_LEDGER,
+                isCompleted = hasTransactions && targetStage > 4,
+                isAvailable = hasTransactions || (case?.status == InvestigationStatus.COMPLETED)
+            ),
+            com.aistudio.orbit.ui.screens.InvestigationStage.RELATED_ADDRESSES to statusFor(
+                com.aistudio.orbit.ui.screens.InvestigationStage.RELATED_ADDRESSES,
+                isCompleted = hasCounterparties && targetStage > 5,
+                isAvailable = hasTransactions || hasCounterparties
+            ),
+            com.aistudio.orbit.ui.screens.InvestigationStage.PATTERN_ANALYSIS to statusFor(
+                com.aistudio.orbit.ui.screens.InvestigationStage.PATTERN_ANALYSIS,
+                isCompleted = hasPatterns && targetStage > 6,
+                isAvailable = hasTransactions || hasCounterparties
+            ),
+            com.aistudio.orbit.ui.screens.InvestigationStage.OSINT_REVIEW to statusFor(
+                com.aistudio.orbit.ui.screens.InvestigationStage.OSINT_REVIEW,
+                isCompleted = hasOsint && targetStage > 7,
+                isAvailable = hasAddress
+            ),
+            com.aistudio.orbit.ui.screens.InvestigationStage.RISK_REVIEW to statusFor(
+                com.aistudio.orbit.ui.screens.InvestigationStage.RISK_REVIEW,
+                isCompleted = hasRisks && targetStage > 8,
+                isAvailable = hasTransactions || hasPatterns || hasOsint
+            ),
+            com.aistudio.orbit.ui.screens.InvestigationStage.EVIDENCE_REVIEW to statusFor(
+                com.aistudio.orbit.ui.screens.InvestigationStage.EVIDENCE_REVIEW,
+                isCompleted = hasEvidence && targetStage > 9,
+                isAvailable = hasEvidence || hasRisks || hasPatterns || hasTransactions
+            ),
+            com.aistudio.orbit.ui.screens.InvestigationStage.CONCLUSION to statusFor(
+                com.aistudio.orbit.ui.screens.InvestigationStage.CONCLUSION,
+                isCompleted = hasHypotheses && targetStage > 10,
+                isAvailable = hasEvidence
+            ),
+            com.aistudio.orbit.ui.screens.InvestigationStage.REPORT to statusFor(
+                com.aistudio.orbit.ui.screens.InvestigationStage.REPORT,
+                isCompleted = targetStage == 11 && hasEvidence,
+                isAvailable = hasEvidence || hasTransactions
+            )
+        )
     }
 }

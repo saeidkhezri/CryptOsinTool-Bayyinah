@@ -553,17 +553,20 @@ object PdfReportExporter {
             paint.textSize = 8f
             courtLines.forEach { line ->
                 paint.typeface = if (line.startsWith(" ") || line.startsWith("   ")) Typeface.create(Typeface.DEFAULT, Typeface.NORMAL) else Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-                if (isFa) {
-                    paint.textAlign = Paint.Align.RIGHT
-                    canvas4.drawText(line, 555f, y4, paint)
-                } else {
-                    canvas4.drawText(line, 35f, y4, paint)
-                }
-                y4 += 18f
+                y4 = drawWrappedText(
+                    canvas = canvas4,
+                    paint = paint,
+                    text = line,
+                    x = if (isFa) 555f else 35f,
+                    y = y4,
+                    maxWidth = 520f,
+                    lineHeight = 14f,
+                    isFa = isFa
+                ) + 3f
             }
             if (isFa) paint.textAlign = Paint.Align.LEFT
 
-            y4 += 30f
+            y4 += 15f
 
             // Official Signature & Seal Block
             paint.color = Color.parseColor("#F8FAFC")
@@ -731,6 +734,57 @@ object PdfReportExporter {
         paint.strokeWidth = 1f
         canvas.drawLine(30f, lineY, 565f, lineY, paint)
         return lineY + 12f
+    }
+
+    private fun drawWrappedText(
+        canvas: Canvas,
+        paint: Paint,
+        text: String,
+        x: Float,
+        y: Float,
+        maxWidth: Float,
+        lineHeight: Float,
+        isFa: Boolean,
+        maxLines: Int = 10
+    ): Float {
+        val words = text.split(" ")
+        var currentLine = ""
+        var currentY = y
+        var lineCount = 0
+
+        for (word in words) {
+            val testLine = if (currentLine.isEmpty()) word else "$currentLine $word"
+            val width = paint.measureText(testLine)
+            if (width <= maxWidth) {
+                currentLine = testLine
+            } else {
+                if (currentLine.isNotEmpty()) {
+                    if (isFa) {
+                        paint.textAlign = Paint.Align.RIGHT
+                        canvas.drawText(currentLine, x, currentY, paint)
+                    } else {
+                        paint.textAlign = Paint.Align.LEFT
+                        canvas.drawText(currentLine, x, currentY, paint)
+                    }
+                    currentY += lineHeight
+                    lineCount++
+                    if (lineCount >= maxLines) break
+                }
+                currentLine = word
+            }
+        }
+        if (currentLine.isNotEmpty() && lineCount < maxLines) {
+            if (isFa) {
+                paint.textAlign = Paint.Align.RIGHT
+                canvas.drawText(currentLine, x, currentY, paint)
+            } else {
+                paint.textAlign = Paint.Align.LEFT
+                canvas.drawText(currentLine, x, currentY, paint)
+            }
+            currentY += lineHeight
+        }
+        if (isFa) paint.textAlign = Paint.Align.LEFT
+        return currentY
     }
 
     private fun drawKeyValue(canvas: Canvas, paint: Paint, label: String, value: String, x: Float, y: Float, isFa: Boolean) {

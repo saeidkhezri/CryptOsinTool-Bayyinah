@@ -232,9 +232,9 @@ class OrbitViewModel : ViewModel() {
                                 }
                             }.awaitAll().forEach { (address, newAddrs) ->
                                 processed.add(address)
-                                database[address] = mutableMapOf()
+                                val addressMap = database.getOrPut(address) { mutableMapOf() }
                                 newAddrs.forEach { addr ->
-                                    database[address]!![addr] = (database[address]!![addr] ?: 0) + 1
+                                    addressMap[addr] = (addressMap[addr] ?: 0) + 1
                                 }
                                 current++
                                 progressMessage.value = "$current / $total (Level ${i + 1}/$d)"

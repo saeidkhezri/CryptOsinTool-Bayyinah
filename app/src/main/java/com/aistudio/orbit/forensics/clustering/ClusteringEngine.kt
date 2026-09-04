@@ -13,9 +13,11 @@ class UnionFind {
     fun find(address: String): String {
         val root = parent.getOrPut(address) { address }
         if (root != address) {
-            parent[address] = find(root) // Path compression
+            val compressed = find(root)
+            parent[address] = compressed
+            return compressed
         }
-        return parent[address]!!
+        return root
     }
 
     fun union(addr1: String, addr2: String) {
