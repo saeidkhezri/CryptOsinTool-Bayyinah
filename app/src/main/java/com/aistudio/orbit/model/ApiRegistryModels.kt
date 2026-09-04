@@ -59,6 +59,7 @@ data class ApiQuotaInfo(
 data class ComprehensiveApiConfig(
     val id: String,
     val name: String,
+    val displayNameFa: String = "",
     val category: ApiCategory,
     val baseUrl: String,
     val apiKey: String = "",
@@ -78,7 +79,67 @@ data class ComprehensiveApiConfig(
     val quotaInfo: ApiQuotaInfo = ApiQuotaInfo(),
     val connectionState: ApiConnectionState = ApiConnectionState.NOT_CONFIGURED,
     val lastCheckedTimestamp: Long = 0,
+    val pingMs: Long = -1,
+    val requiresVpn: Boolean = false,
     val isEnabled: Boolean = true
+)
+
+/**
+ * Diagnostic Step Identifier for API connection testing popup.
+ */
+@Serializable
+enum class DiagnosticStepId {
+    INTERNET_PING,
+    VPN_REGION_CHECK,
+    KEY_AUTH_VALIDATION,
+    QUOTA_CALCULATION,
+    KEYSTORE_COMMIT
+}
+
+/**
+ * Status of a single diagnostic step during API key testing.
+ */
+@Serializable
+enum class StepStatus {
+    PENDING,
+    RUNNING,
+    PASSED,
+    FAILED,
+    SKIPPED
+}
+
+/**
+ * Progress of an individual step in the live testing popup.
+ */
+@Serializable
+data class DiagnosticStepProgress(
+    val stepId: DiagnosticStepId,
+    val titleFa: String,
+    val titleEn: String,
+    val status: StepStatus,
+    val detailFa: String = "",
+    val detailEn: String = ""
+)
+
+/**
+ * Comprehensive live diagnostic test result for an API key.
+ */
+@Serializable
+data class ApiComprehensiveDiagnosticResult(
+    val apiId: String,
+    val name: String,
+    val primaryKey: String,
+    val secondaryKey: String = "",
+    val connectionState: ApiConnectionState,
+    val pingMs: Long = -1,
+    val requiresVpn: Boolean = false,
+    val quotaRemainingPercent: Int = 100,
+    val quotaFormattedText: String = "",
+    val rateLimitStr: String = "",
+    val steps: List<DiagnosticStepProgress> = emptyList(),
+    val officialUrl: String = "",
+    val guidanceFa: String = "",
+    val guidanceEn: String = ""
 )
 
 /**

@@ -22,6 +22,8 @@ import kotlinx.coroutines.launch
 import java.io.File
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -92,6 +94,38 @@ fun ApiSettingsView(
     var selectedApiCategory by remember { mutableStateOf<ApiCategory?>(null) }
     var showSetPasswordDialog by remember { mutableStateOf(false) }
 
+    // Live Diagnostic Popup States
+    var diagnosticResultToDisplay by remember { mutableStateOf<ApiComprehensiveDiagnosticResult?>(null) }
+    var activeDiagnosticSteps by remember { mutableStateOf<List<DiagnosticStepProgress>>(emptyList()) }
+    var isRunningDiagnostics by remember { mutableStateOf(false) }
+
+    val onRunDiagnostics: (String) -> Unit = { id ->
+        coroutineScope.launch {
+            isRunningDiagnostics = true
+            activeDiagnosticSteps = emptyList()
+            diagnosticResultToDisplay = null
+            val result = viewModel.apiManagerService.runLiveDiagnostics(
+                apiId = id,
+                onStepProgress = { progress ->
+                    activeDiagnosticSteps = activeDiagnosticSteps.toMutableList().apply {
+                        val idx = indexOfFirst { it.stepId == progress.stepId }
+                        if (idx >= 0) this[idx] = progress else add(progress)
+                    }
+                }
+            )
+            diagnosticResultToDisplay = result
+            isRunningDiagnostics = false
+        }
+    }
+
+    // Periodic Ping Refresh Effect
+    LaunchedEffect(Unit) {
+        while (true) {
+            kotlinx.coroutines.delay(12000)
+            viewModel.apiManagerService.refreshAllPingStatuses()
+        }
+    }
+
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val widthClass = when {
             maxWidth < 600.dp -> WindowWidthSizeClass.Compact
@@ -131,6 +165,7 @@ fun ApiSettingsView(
                     sherlockEndpoint = sherlockEndpoint,
                     sherlockApiKey = sherlockApiKey,
                     testingApiId = testingApiId,
+                    onTestConnection = onRunDiagnostics,
                     onOpenHelp = { activeHelpDialogApi = it },
                     databases = databases,
                     storageBreakdown = storageBreakdown,
@@ -174,6 +209,7 @@ fun ApiSettingsView(
                         sherlockEndpoint = sherlockEndpoint,
                         sherlockApiKey = sherlockApiKey,
                         testingApiId = testingApiId,
+                        onTestConnection = onRunDiagnostics,
                         onOpenHelp = { activeHelpDialogApi = it },
                         databases = databases,
                         storageBreakdown = storageBreakdown,
@@ -415,6 +451,20 @@ fun ApiSettingsView(
             }
         )
     }
+
+    if (isRunningDiagnostics || diagnosticResultToDisplay != null || activeDiagnosticSteps.isNotEmpty()) {
+        ApiValidationDiagnosticsDialog(
+            isPersian = isPersian,
+            diagnosticResult = diagnosticResultToDisplay,
+            activeSteps = activeDiagnosticSteps,
+            isRunning = isRunningDiagnostics,
+            onDismiss = {
+                isRunningDiagnostics = false
+                diagnosticResultToDisplay = null
+                activeDiagnosticSteps = emptyList()
+            }
+        )
+    }
 }
 
 enum class SettingsSection {
@@ -580,6 +630,7 @@ fun SettingsScaffold(
     sherlockEndpoint: String,
     sherlockApiKey: String,
     testingApiId: String?,
+    onTestConnection: (String) -> Unit = {},
     onOpenHelp: (ComprehensiveApiConfig) -> Unit,
     databases: List<ForensicDatabaseInfo>,
     storageBreakdown: StorageBreakdown,
@@ -641,11 +692,7 @@ fun SettingsScaffold(
                         onUpdateSherlock = { enabled, ep, key -> viewModel.apiManagerService.updateSherlockConfig(enabled, ep, key) },
                         onSaveKey = { id, key, sec -> viewModel.apiManagerService.saveApiKey(id, key, sec) },
                         onToggleEnabled = { id, enabled -> viewModel.apiManagerService.toggleProviderEnabled(id, enabled) },
-                        onTestConnection = { id ->
-                            coroutineScope.launch {
-                                viewModel.apiManagerService.testConnection(id)
-                            }
-                        },
+                        onTestConnection = onTestConnection,
                         testingApiId = testingApiId,
                         onOpenHelp = onOpenHelp
                     )
@@ -1238,6 +1285,71 @@ fun ApisAndIntegrationsTab(
 }
 
 @Composable
+fun ProviderBrandBadge(
+    apiId: String,
+    category: ApiCategory,
+    size: androidx.compose.ui.unit.Dp = 32.dp
+) {
+    val (bgColor, iconColor, label) = when (apiId) {
+        "mempool_space_btc" -> Triple(Color(0xFFFFF3E0), Color(0xFFF57C00), "BTC")
+        "etherscan_eth" -> Triple(Color(0xFFE8EAF6), Color(0xFF3F51B5), "ETH")
+        "trongrid_tron" -> Triple(Color(0xFFFFEBEE), Color(0xFFD32F2F), "TRX")
+        "google_gemini_ai" -> Triple(Color(0xFFE0F7FA), Color(0xFF00838F), "AI")
+        "openai_gpt" -> Triple(Color(0xFFE8F5E9), Color(0xFF2E7D32), "GPT")
+        "deepseek_ai" -> Triple(Color(0xFFE1F5FE), Color(0xFF0288D1), "DS")
+        "youcom_search_ai" -> Triple(Color(0xFFF3E5F5), Color(0xFF7B1FA2), "YOU")
+        "anthropic_claude" -> Triple(Color(0xFFFFF8E1), Color(0xFFFFA000), "CLD")
+        "cryptoapis_multi" -> Triple(Color(0xFFECEFF1), Color(0xFF455A64), "API")
+        "shodan_recon" -> Triple(Color(0xFFFFE0B2), Color(0xFFE65100), "SHD")
+        "abuseipdb_threat" -> Triple(Color(0xFFFFEBEE), Color(0xFFC62828), "IP")
+        "virustotal_threat" -> Triple(Color(0xFFE8EAF6), Color(0xFF1A237E), "VT")
+        "numverify_phone" -> Triple(Color(0xFFE8F5E9), Color(0xFF1B5E20), "TEL")
+        "blockchair_multi" -> Triple(Color(0xFFEDE7F6), Color(0xFF512DA8), "BLK")
+        "misp_threat_node" -> Triple(Color(0xFFFCE4EC), Color(0xFF880E4F), "MISP")
+        "hibp_identity" -> Triple(Color(0xFFE0F2F1), Color(0xFF004D40), "PWN")
+        else -> {
+            val bg = when (category) {
+                ApiCategory.AI -> Color(0xFFE0F2F1)
+                ApiCategory.OSINT -> Color(0xFFFFEBEE)
+                ApiCategory.BLOCKCHAIN -> Color(0xFFFFF3E0)
+                ApiCategory.THREAT_INTEL -> Color(0xFFF3E5F5)
+                ApiCategory.MARKET_DATA -> Color(0xFFE3F2FD)
+                ApiCategory.GEOLOCATION -> Color(0xFFE8F5E9)
+                ApiCategory.OSINT_TOOLS -> Color(0xFFEDE7F6)
+            }
+            val iconC = when (category) {
+                ApiCategory.AI -> Color(0xFF00695C)
+                ApiCategory.OSINT -> Color(0xFFC62828)
+                ApiCategory.BLOCKCHAIN -> Color(0xFFEF6C00)
+                ApiCategory.THREAT_INTEL -> Color(0xFF6A1B9A)
+                ApiCategory.MARKET_DATA -> Color(0xFF1565C0)
+                ApiCategory.GEOLOCATION -> Color(0xFF2E7D32)
+                ApiCategory.OSINT_TOOLS -> Color(0xFF4527A0)
+            }
+            Triple(bg, iconC, category.name.take(3))
+        }
+    }
+
+    Box(
+        modifier = Modifier
+            .size(size)
+            .clip(RoundedCornerShape(8.dp))
+            .background(bgColor),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium.copy(
+                fontWeight = FontWeight.Black,
+                fontSize = (size.value * 0.35f).sp,
+                fontFamily = FontFamily.Monospace
+            ),
+            color = iconColor
+        )
+    }
+}
+
+@Composable
 fun ApiConfigItemCard(
     isPersian: Boolean,
     api: ComprehensiveApiConfig,
@@ -1247,108 +1359,150 @@ fun ApiConfigItemCard(
     onTestConnection: () -> Unit,
     onOpenHelp: () -> Unit
 ) {
-    val context = LocalContext.current
     var keyInput by remember(api.apiKey) { mutableStateOf(api.apiKey) }
     var secondaryKeyInput by remember(api.secondaryKey) { mutableStateOf(api.secondaryKey) }
     var isKeyVisible by remember { mutableStateOf(false) }
     var isSecondaryKeyVisible by remember { mutableStateOf(false) }
     var showSecondaryKeyField by remember { mutableStateOf(api.secondaryKey.isNotBlank()) }
 
+    val displayName = api.displayNameFa.ifBlank { api.name }
+
     Card(
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (api.isEnabled) MaterialTheme.colorScheme.surfaceContainerLow else MaterialTheme.colorScheme.surfaceContainerLowest
+        ),
         modifier = Modifier.fillMaxWidth(),
-        border = if (api.isEnabled) BorderStroke(0.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)) else null
+        border = BorderStroke(
+            0.5.dp,
+            if (api.isEnabled) MaterialTheme.colorScheme.primary.copy(alpha = 0.25f) else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+        )
     ) {
         Column(
-            modifier = Modifier.padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            modifier = Modifier.padding(10.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            // Compact Header
+            // Header Row: Brand Badge, Title & Switch
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                val icon = when (api.category) {
-                    ApiCategory.AI -> Icons.Default.Psychology
-                    ApiCategory.OSINT -> Icons.Default.Radar
-                    ApiCategory.BLOCKCHAIN -> Icons.Default.CurrencyBitcoin
-                    ApiCategory.THREAT_INTEL -> Icons.Default.Security
-                    ApiCategory.MARKET_DATA -> Icons.Default.ShowChart
-                    ApiCategory.GEOLOCATION -> Icons.Default.Public
-                    ApiCategory.OSINT_TOOLS -> Icons.Default.Search
-                }
-                val themeColor = when (api.category) {
-                    ApiCategory.AI -> Color(0xFF00796B)
-                    ApiCategory.OSINT -> Color(0xFFD32F2F)
-                    ApiCategory.BLOCKCHAIN -> Color(0xFFE65100)
-                    ApiCategory.THREAT_INTEL -> Color(0xFF7B1FA2)
-                    ApiCategory.MARKET_DATA -> Color(0xFF1976D2)
-                    ApiCategory.GEOLOCATION -> Color(0xFF388E3C)
-                    ApiCategory.OSINT_TOOLS -> Color(0xFF512DA8)
-                }
-
-                Box(
-                    modifier = Modifier
-                        .size(36.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(themeColor.copy(alpha = 0.1f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(icon, contentDescription = null, tint = themeColor, modifier = Modifier.size(20.dp))
-                }
+                ProviderBrandBadge(
+                    apiId = api.id,
+                    category = api.category,
+                    size = 32.dp
+                )
 
                 Column(modifier = Modifier.weight(1f)) {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text(
-                            text = api.name,
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
                     Text(
-                        text = if (isPersian) api.descriptionFa else api.descriptionEn,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        text = displayName,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontSize = 13.sp,
                         maxLines = 1,
-                        fontSize = 11.sp,
                         overflow = TextOverflow.Ellipsis
                     )
+                    
+                    // Compact Status Row: Live Ping & VPN Requirement Tag
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        val (statusText, statusColor) = when (api.connectionState) {
+                            ApiConnectionState.CONNECTED -> Pair(
+                                if (api.pingMs > 0) "${api.pingMs} ms • " + (if (isPersian) "متصل" else "Connected") else (if (isPersian) "متصل" else "Connected"),
+                                Color(0xFF2E7D32)
+                            )
+                            ApiConnectionState.TESTING -> Pair(if (isPersian) "در حال تست..." else "Testing...", Color(0xFF1976D2))
+                            ApiConnectionState.INVALID_KEY -> Pair(if (isPersian) "کلید نامعتبر" else "Invalid Key", MaterialTheme.colorScheme.error)
+                            ApiConnectionState.UNAUTHORIZED -> Pair(if (isPersian) "محدودیت دسترسی" else "Forbidden", Color(0xFFE65100))
+                            ApiConnectionState.RATE_LIMITED -> Pair(if (isPersian) "محدودیت نرخ" else "Rate Limited", Color(0xFFF57C00))
+                            ApiConnectionState.NOT_CONFIGURED -> Pair(if (isPersian) "تنظیم نشده" else "Not Configured", MaterialTheme.colorScheme.outline)
+                            else -> Pair(if (isPersian) "غیرفعال" else "Offline", MaterialTheme.colorScheme.outline)
+                        }
+
+                        Surface(
+                            shape = RoundedCornerShape(4.dp),
+                            color = statusColor.copy(alpha = 0.12f)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(6.dp)
+                                        .clip(CircleShape)
+                                        .background(statusColor)
+                                )
+                                Text(
+                                    text = statusText,
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = statusColor
+                                )
+                            }
+                        }
+
+                        // VPN Badge
+                        val vpnTagText = if (api.requiresVpn) (if (isPersian) "نیازمند VPN" else "VPN Req") else (if (isPersian) "مستقیم" else "Direct")
+                        val vpnTagColor = if (api.requiresVpn) Color(0xFFE65100) else Color(0xFF00796B)
+                        Surface(
+                            shape = RoundedCornerShape(4.dp),
+                            color = vpnTagColor.copy(alpha = 0.1f)
+                        ) {
+                            Text(
+                                text = vpnTagText,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = vpnTagColor,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
                 }
 
                 Switch(
                     checked = api.isEnabled,
                     onCheckedChange = onToggleEnabled,
-                    modifier = Modifier.scale(0.75f)
+                    modifier = Modifier.scale(0.7f)
                 )
             }
 
-            // Elegant Inputs
+            // Input Fields section
             if (api.requiresKey && api.isEnabled) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
+                        .clip(RoundedCornerShape(8.dp))
                         .background(MaterialTheme.colorScheme.surfaceContainer)
-                        .padding(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                        .padding(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     OutlinedTextField(
                         value = keyInput,
                         onValueChange = { keyInput = it },
-                        label = { Text(if (isPersian) "کلید اصلی API" else "Primary API Key", fontSize = 12.sp) },
+                        label = { Text(if (isPersian) "کلید اصلی API" else "Primary API Key", fontSize = 11.sp) },
                         visualTransformation = if (isKeyVisible) VisualTransformation.None else PasswordVisualTransformation(),
                         trailingIcon = {
-                            IconButton(onClick = { isKeyVisible = !isKeyVisible }) {
-                                Icon(if (isKeyVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility, contentDescription = null, modifier = Modifier.size(20.dp))
+                            IconButton(
+                                onClick = { isKeyVisible = !isKeyVisible },
+                                modifier = Modifier.size(28.dp)
+                            ) {
+                                Icon(
+                                    if (isKeyVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp)
+                                )
                             }
                         },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
-                        textStyle = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
-                        shape = RoundedCornerShape(8.dp),
+                        textStyle = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace, fontSize = 11.sp),
+                        shape = RoundedCornerShape(6.dp),
                         colors = OutlinedTextFieldDefaults.colors(
                             unfocusedContainerColor = MaterialTheme.colorScheme.surface,
                             focusedContainerColor = MaterialTheme.colorScheme.surface
@@ -1359,17 +1513,24 @@ fun ApiConfigItemCard(
                         OutlinedTextField(
                             value = secondaryKeyInput,
                             onValueChange = { secondaryKeyInput = it },
-                            label = { Text(if (isPersian) "کلید دوم / پارامتر مخفی" else "Secondary Key / Secret", fontSize = 12.sp) },
+                            label = { Text(if (isPersian) "کلید دوم / Secret" else "Secondary Key / Secret", fontSize = 11.sp) },
                             visualTransformation = if (isSecondaryKeyVisible) VisualTransformation.None else PasswordVisualTransformation(),
                             trailingIcon = {
-                                IconButton(onClick = { isSecondaryKeyVisible = !isSecondaryKeyVisible }) {
-                                    Icon(if (isSecondaryKeyVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility, contentDescription = null, modifier = Modifier.size(20.dp))
+                                IconButton(
+                                    onClick = { isSecondaryKeyVisible = !isSecondaryKeyVisible },
+                                    modifier = Modifier.size(28.dp)
+                                ) {
+                                    Icon(
+                                        if (isSecondaryKeyVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(16.dp)
+                                    )
                                 }
                             },
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true,
-                            textStyle = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
-                            shape = RoundedCornerShape(8.dp),
+                            textStyle = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace, fontSize = 11.sp),
+                            shape = RoundedCornerShape(6.dp),
                             colors = OutlinedTextFieldDefaults.colors(
                                 unfocusedContainerColor = MaterialTheme.colorScheme.surface,
                                 focusedContainerColor = MaterialTheme.colorScheme.surface
@@ -1378,98 +1539,386 @@ fun ApiConfigItemCard(
                     } else {
                         TextButton(
                             onClick = { showSecondaryKeyField = true },
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-                            modifier = Modifier.height(32.dp)
+                            contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp),
+                            modifier = Modifier.height(26.dp)
                         ) {
-                            Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(14.dp))
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text(if (isPersian) "افزودن پارامتر دوم" else "Add Secondary Parameter", fontSize = 11.sp)
+                            Text(if (isPersian) "افزودن پارامتر دوم" else "Add Secret Key", fontSize = 10.sp)
                         }
                     }
 
                     if (keyInput != api.apiKey || secondaryKeyInput != api.secondaryKey) {
                         Button(
                             onClick = { onSaveKey(keyInput, secondaryKeyInput) },
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.fillMaxWidth().height(32.dp),
+                            shape = RoundedCornerShape(6.dp),
                             contentPadding = PaddingValues(0.dp)
                         ) {
-                            Text(if (isPersian) "ذخیره تغییرات" else "Save Changes", fontSize = 12.sp)
+                            Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(14.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(if (isPersian) "ذخیره تغییرات" else "Save Changes", fontSize = 11.sp)
                         }
                     }
                 }
             }
 
-            // Metrics and Actions
+            // Quota Bar & Quick Actions
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Quota Mini-Indicator
+                // Quota Mini Progress
                 Column(modifier = Modifier.weight(1f)) {
+                    val remainingPct = api.quotaInfo.remainingPercent
                     val quotaLimit = api.quotaInfo.totalCount ?: 0
-                    val quotaUsed = quotaLimit - (api.quotaInfo.remainingCount ?: 0)
-                    val progress = if (quotaLimit > 0) quotaUsed.toFloat() / quotaLimit else 0f
-                    val color = when {
-                        progress > 0.9f -> MaterialTheme.colorScheme.error
-                        progress > 0.7f -> MaterialTheme.colorScheme.error.copy(alpha = 0.7f)
-                        else -> MaterialTheme.colorScheme.primary
+                    val quotaRemaining = api.quotaInfo.remainingCount ?: 0
+                    val progress = (remainingPct.toFloat() / 100f).coerceIn(0f, 1f)
+                    val barColor = when {
+                        remainingPct < 15 -> MaterialTheme.colorScheme.error
+                        remainingPct < 40 -> Color(0xFFF57C00)
+                        else -> Color(0xFF2E7D32)
                     }
-                    
+
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.Bottom
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = if (isPersian) "مصرف سهمیه" else "Quota Usage",
+                            text = if (isPersian) "سهمیه:" else "Quota:",
                             style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontSize = 10.sp
                         )
                         Text(
-                            text = "$quotaUsed / $quotaLimit",
+                            text = if (quotaLimit > 0) "$quotaRemaining / $quotaLimit ($remainingPct٪)" else "$remainingPct٪",
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold,
-                            fontFamily = FontFamily.Monospace
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 10.sp
                         )
                     }
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(2.dp))
                     LinearProgressIndicator(
                         progress = { progress },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(4.dp)
+                            .height(3.dp)
                             .clip(CircleShape),
-                        color = color,
-                        trackColor = color.copy(alpha = 0.1f)
+                        color = barColor,
+                        trackColor = barColor.copy(alpha = 0.12f)
                     )
                 }
 
-                Spacer(modifier = Modifier.width(16.dp))
+                Spacer(modifier = Modifier.width(12.dp))
 
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     FilledTonalIconButton(
                         onClick = onTestConnection,
-                        modifier = Modifier.size(36.dp),
-                        shape = RoundedCornerShape(10.dp)
+                        modifier = Modifier.size(32.dp),
+                        shape = RoundedCornerShape(8.dp)
                     ) {
                         if (isTesting) {
-                            CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                            CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
                         } else {
-                            Icon(Icons.Default.Bolt, contentDescription = "Test", modifier = Modifier.size(18.dp))
+                            Icon(Icons.Default.Bolt, contentDescription = "Test", modifier = Modifier.size(16.dp))
                         }
                     }
                     IconButton(
                         onClick = onOpenHelp,
-                        modifier = Modifier.size(36.dp)
+                        modifier = Modifier.size(32.dp)
                     ) {
-                        Icon(Icons.Default.HelpOutline, contentDescription = "Help", modifier = Modifier.size(20.dp))
+                        Icon(Icons.Default.HelpOutline, contentDescription = "Help", modifier = Modifier.size(18.dp))
                     }
                 }
             }
         }
     }
+}
+
+@Composable
+fun ApiValidationDiagnosticsDialog(
+    isPersian: Boolean,
+    diagnosticResult: ApiComprehensiveDiagnosticResult?,
+    activeSteps: List<DiagnosticStepProgress>,
+    isRunning: Boolean,
+    onDismiss: () -> Unit
+) {
+    if (diagnosticResult == null && activeSteps.isEmpty() && !isRunning) return
+
+    val context = LocalContext.current
+    val apiName = diagnosticResult?.name ?: (if (isPersian) "تست و اعتبارسنجی سرویس API" else "API Diagnostic Test")
+
+    AlertDialog(
+        onDismissRequest = { if (!isRunning) onDismiss() },
+        shape = RoundedCornerShape(20.dp),
+        containerColor = MaterialTheme.colorScheme.surface,
+        title = {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                ProviderBrandBadge(
+                    apiId = diagnosticResult?.apiId ?: "",
+                    category = ApiCategory.AI,
+                    size = 36.dp
+                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = apiName,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = if (isPersian) "تست اتصال زنده، ارزیابی تحریم، سهمیه و ثبت امن" else "Live connection test, VPN check, quota & vault commit",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = 11.sp
+                    )
+                }
+                if (isRunning) {
+                    CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                }
+            }
+        },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+                val stepListToRender = if (diagnosticResult != null && diagnosticResult.steps.isNotEmpty()) {
+                    diagnosticResult.steps
+                } else if (activeSteps.isNotEmpty()) {
+                    activeSteps
+                } else {
+                    DiagnosticStepId.values().map { stepId ->
+                        DiagnosticStepProgress(
+                            stepId = stepId,
+                            titleFa = when(stepId) {
+                                DiagnosticStepId.INTERNET_PING -> "بررسی اتصال اینترنت و اندازه‌گیری پینگ (Ping)"
+                                DiagnosticStepId.VPN_REGION_CHECK -> "ارزیابی تحریم جغرافیایی و نیاز به VPN"
+                                DiagnosticStepId.KEY_AUTH_VALIDATION -> "اعتبارسنجی ساختار و احراز هویت کلید API"
+                                DiagnosticStepId.QUOTA_CALCULATION -> "محاسبه دقیق سهمیه باقیمانده و نرخ فراخوانی"
+                                DiagnosticStepId.KEYSTORE_COMMIT -> "ثبت امن و ذخیره‌سازی در گاوصندوق Android KeyStore"
+                            },
+                            titleEn = stepId.name,
+                            status = StepStatus.PENDING,
+                            detailFa = "در انتظار اجرا...",
+                            detailEn = "Waiting..."
+                        )
+                    }
+                }
+
+                stepListToRender.forEach { step ->
+                    Card(
+                        shape = RoundedCornerShape(10.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = when (step.status) {
+                                StepStatus.PASSED -> Color(0xFF4CAF50).copy(alpha = 0.08f)
+                                StepStatus.FAILED -> MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f)
+                                StepStatus.RUNNING -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+                                StepStatus.SKIPPED -> MaterialTheme.colorScheme.surfaceContainer
+                                StepStatus.PENDING -> MaterialTheme.colorScheme.surfaceContainer
+                            }
+                        ),
+                        border = BorderStroke(
+                            0.5.dp,
+                            when (step.status) {
+                                StepStatus.PASSED -> Color(0xFF4CAF50).copy(alpha = 0.3f)
+                                StepStatus.FAILED -> MaterialTheme.colorScheme.error.copy(alpha = 0.4f)
+                                StepStatus.RUNNING -> MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
+                                StepStatus.SKIPPED -> MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+                                StepStatus.PENDING -> MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+                            }
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(10.dp),
+                            verticalAlignment = Alignment.Top,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            when (step.status) {
+                                StepStatus.PASSED -> {
+                                    Icon(
+                                        Icons.Default.CheckCircle,
+                                        contentDescription = "Passed",
+                                        tint = Color(0xFF2E7D32),
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                                StepStatus.FAILED -> {
+                                    Icon(
+                                        Icons.Default.Error,
+                                        contentDescription = "Failed",
+                                        tint = MaterialTheme.colorScheme.error,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                                StepStatus.RUNNING -> {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(18.dp),
+                                        strokeWidth = 2.dp,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                                StepStatus.SKIPPED -> {
+                                    Icon(
+                                        Icons.Default.RemoveCircleOutline,
+                                        contentDescription = "Skipped",
+                                        tint = MaterialTheme.colorScheme.outline,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                                StepStatus.PENDING -> {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(18.dp)
+                                            .clip(CircleShape)
+                                            .background(MaterialTheme.colorScheme.outlineVariant)
+                                    )
+                                }
+                            }
+
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = if (isPersian) step.titleFa else step.titleEn,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = if (isPersian) step.detailFa else step.detailEn,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    fontSize = 11.sp
+                                )
+                            }
+                        }
+                    }
+                }
+
+                if (diagnosticResult != null) {
+                    Card(
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Text(
+                                text = if (isPersian) "خلاصه ارزیابی و وضعیت کارکرد" else "Diagnostic Summary & Status",
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(if (isPersian) "وضعیت اتصال:" else "Connection:", fontSize = 11.sp)
+                                Surface(
+                                    shape = RoundedCornerShape(6.dp),
+                                    color = when(diagnosticResult.connectionState) {
+                                        ApiConnectionState.CONNECTED -> Color(0xFF4CAF50)
+                                        ApiConnectionState.INVALID_KEY -> MaterialTheme.colorScheme.error
+                                        ApiConnectionState.UNAUTHORIZED -> Color(0xFFFF9800)
+                                        else -> MaterialTheme.colorScheme.secondary
+                                    }
+                                ) {
+                                    Text(
+                                        text = if (isPersian) diagnosticResult.connectionState.titleFa else diagnosticResult.connectionState.titleEn,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                                        fontSize = 10.sp,
+                                        color = Color.White,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(if (isPersian) "تاخیر پاسخ‌دهی (Ping):" else "Ping Latency:", fontSize = 11.sp)
+                                Text(
+                                    text = if (diagnosticResult.pingMs > 0) "${diagnosticResult.pingMs} ms" else "N/A",
+                                    fontSize = 11.sp,
+                                    fontFamily = FontFamily.Monospace,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(if (isPersian) "نیاز به VPN:" else "VPN Requirement:", fontSize = 11.sp)
+                                Text(
+                                    text = if (diagnosticResult.requiresVpn) (if (isPersian) "بله (تحریم منطقه‌ای)" else "Yes (Region Restricted)") else (if (isPersian) "خیر (دسترسی مستقیم)" else "No (Direct Access)"),
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (diagnosticResult.requiresVpn) Color(0xFFE65100) else Color(0xFF2E7D32)
+                                )
+                            }
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(if (isPersian) "سهمیه و نرخ:" else "Quota & Rate:", fontSize = 11.sp)
+                                Text(
+                                    text = diagnosticResult.quotaFormattedText,
+                                    fontSize = 11.sp,
+                                    fontFamily = FontFamily.Monospace
+                                )
+                            }
+                        }
+                    }
+
+                    if (diagnosticResult.connectionState != ApiConnectionState.CONNECTED && diagnosticResult.officialUrl.isNotBlank()) {
+                        OutlinedButton(
+                            onClick = {
+                                try {
+                                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(diagnosticResult.officialUrl))
+                                    context.startActivity(intent)
+                                } catch (e: Exception) { }
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Icon(Icons.Default.OpenInNew, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(if (isPersian) "دریافت/تمدید کلید از پنل رسمی" else "Get/Renew Key at Portal", fontSize = 11.sp)
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onDismiss,
+                enabled = !isRunning,
+                shape = RoundedCornerShape(10.dp)
+            ) {
+                Text(if (isPersian) "تایید و بستن" else "Confirm & Close")
+            }
+        }
+    )
 }
 @Composable
 fun DatabasesTab(
