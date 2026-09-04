@@ -564,9 +564,14 @@ class InvestigationViewModel(application: Application) : AndroidViewModel(applic
                     totalTransactionsFound = txCount.coerceAtLeast(transactions.size),
                     firstTxTimestamp = transactions.minByOrNull { it.timestamp }?.timestamp,
                     lastTxTimestamp = transactions.maxByOrNull { it.timestamp }?.timestamp,
-                    counterparties = counterparties,
-                    transactions = transactions,
-                    evidenceLog = evidenceChain,
+                    counterparties = counterparties.take(50),
+                    transactions = transactions.take(100).map { tx -> 
+                        tx.copy(
+                            inputs = tx.inputs.take(20), 
+                            outputs = tx.outputs.take(20)
+                        )
+                    },
+                    evidenceLog = evidenceChain.take(50),
                     riskIndicators = riskIndicators,
                     activeStageId = when {
                         evidenceChain.isNotEmpty() -> 9

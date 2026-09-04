@@ -419,11 +419,14 @@ object ForensicCaseGraphEngine {
      * Executes a spring-repulsion force-directed layout step to prevent overlapping nodes.
      */
     fun relaxLayout(nodes: List<InteractiveCaseNode>, edges: List<InteractiveCaseEdge>, iterations: Int = 20) {
+        if (nodes.isEmpty()) return
+        val actualIterations = if (nodes.size > 500) 2 else if (nodes.size > 200) 5 else iterations
+        
         val k = 160f // Preferred distance
         val repulsion = 4800f
         val attraction = 0.045f
 
-        for (iter in 0 until iterations) {
+        for (iter in 0 until actualIterations) {
             // Node-Node Repulsion
             for (i in nodes.indices) {
                 val n1 = nodes[i]
