@@ -75,18 +75,23 @@ fun NewInvestigationView(
         targetAddress.trim().startsWith("0x", ignoreCase = true) && targetAddress.trim().length == 42
     }
 
-    BoxWithConstraints(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.TopCenter
-    ) {
-        LazyColumn(
+    Scaffold(
+        modifier = Modifier.fillMaxSize()
+    ) { paddingValues ->
+        BoxWithConstraints(
             modifier = Modifier
-                .fillMaxHeight()
-                .widthIn(max = 640.dp)
-                .fillMaxWidth()
-                .padding(horizontal = if (maxWidth < 600.dp) 12.dp else 20.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .fillMaxSize()
+                .padding(paddingValues),
+            contentAlignment = Alignment.TopCenter
         ) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .widthIn(max = 640.dp)
+                    .fillMaxWidth()
+                    .padding(horizontal = if (maxWidth < 600.dp) 12.dp else 20.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
             // Section Header
             item {
                 Card(
@@ -656,4 +661,5 @@ fun NewInvestigationView(
             }
         }
     }
+}
 }

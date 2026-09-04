@@ -18,6 +18,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.PointerEventPass
@@ -29,6 +30,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.aistudio.orbit.localization.AppLocalization
+import com.aistudio.orbit.localization.toPersianDigits
 import com.aistudio.orbit.model.InvestigationCase
 import com.aistudio.orbit.repository.AppLanguage
 import com.aistudio.orbit.ui.InvestigationViewModel
@@ -404,6 +406,55 @@ class MainActivity : ComponentActivity() {
                                                 .weight(1f)
                                                 .fillMaxWidth()
                                         ) {
+                                         // Persistent Floating Background Progress Indicator (Remix)
+                                         if (progressState.isRunning && progressState.isBackgrounded) {
+                                             Card(
+                                                 onClick = { investigationViewModel.restoreOperationToForeground() },
+                                                 modifier = Modifier
+                                                     .align(Alignment.BottomEnd)
+                                                     .padding(16.dp)
+                                                     .width(280.dp)
+                                                     .shadow(8.dp, RoundedCornerShape(12.dp)),
+                                                 shape = RoundedCornerShape(12.dp),
+                                                 colors = CardDefaults.cardColors(
+                                                     containerColor = MaterialTheme.colorScheme.primaryContainer
+                                                 )
+                                             ) {
+                                                 Row(
+                                                     modifier = Modifier.padding(12.dp),
+                                                     verticalAlignment = Alignment.CenterVertically,
+                                                     horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                                 ) {
+                                                     CircularProgressIndicator(
+                                                         progress = { progressState.progress ?: 0.35f },
+                                                         modifier = Modifier.size(24.dp),
+                                                         strokeWidth = 2.5.dp,
+                                                         color = MaterialTheme.colorScheme.primary
+                                                     )
+                                                     Column(modifier = Modifier.weight(1f)) {
+                                                         Text(
+                                                             text = if (isPersian) "تحلیل در پس‌زمینه..." else "Tracing in background...",
+                                                             style = MaterialTheme.typography.labelMedium,
+                                                             fontWeight = FontWeight.Bold,
+                                                             color = MaterialTheme.colorScheme.onPrimaryContainer
+                                                         )
+                                                         Text(
+                                                             text = "${((progressState.progress ?: 0.35f) * 100).toInt()}% • " + 
+                                                                    (if (isPersian) "لایه ${progressState.currentLayer.toString().toPersianDigits()}" else "L${progressState.currentLayer}"),
+                                                             style = MaterialTheme.typography.bodySmall,
+                                                             color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                                                         )
+                                                     }
+                                                     Icon(
+                                                         imageVector = Icons.Default.Launch,
+                                                         contentDescription = "Restore Dialog",
+                                                         tint = MaterialTheme.colorScheme.primary,
+                                                         modifier = Modifier.size(20.dp)
+                                                     )
+                                                 }
+                                             }
+                                         }
+
                                          val displayedCase = if (detailedCase != null) activeCase ?: detailedCase else null
                                          if (displayedCase != null) {
                                              InvestigationWorkspaceView(
@@ -473,11 +524,14 @@ class MainActivity : ComponentActivity() {
                         }
 
                         // Cancellable Forensic Progress Dialog
-                        if (progressState.isRunning) {
+                        if (progressState.isRunning && !progressState.isBackgrounded) {
                             ForensicOperationProgressDialog(
                                 state = progressState,
                                 onCancel = {
                                     investigationViewModel.cancelCurrentOperation()
+                                },
+                                onBackground = {
+                                    investigationViewModel.moveOperationToBackground()
                                 },
                                 isPersian = isPersian
                             )

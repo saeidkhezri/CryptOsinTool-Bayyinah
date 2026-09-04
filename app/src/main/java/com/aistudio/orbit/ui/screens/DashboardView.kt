@@ -208,8 +208,8 @@ fun DashboardView(
                             Button(
                                 onClick = onNavigateToOsint,
                                 colors = ButtonDefaults.buttonColors(
-                                    containerColor = MaterialTheme.colorScheme.secondary,
-                                    contentColor = MaterialTheme.colorScheme.onSecondary
+                                    containerColor = Color(0xFF795548), // Earthy Brown/Bronze
+                                    contentColor = Color.White
                                 ),
                                 shape = ForensicShapes.md,
                                 contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),

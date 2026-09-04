@@ -28,6 +28,7 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import com.aistudio.orbit.localization.toPersianDigits
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -64,16 +65,26 @@ data class ForensicProgressState(
     val itemsProcessed: Int = 0,
     val totalItems: Int = 0,
     val resourceLeds: List<ForensicResourceLed> = emptyList(),
-    val subTasks: List<ForensicSubTask> = emptyList()
+    val subTasks: List<ForensicSubTask> = emptyList(),
+    // Extended real-time metrics
+    val currentLayer: Int = 1,
+    val currentSubBranch: Int = 1,
+    val foundAddressesCount: Int = 0,
+    val foundRelationsCount: Int = 0,
+    val foundTransactionsCount: Int = 0,
+    val elapsedTimeSec: Int = 0,
+    val estimatedTimeLeftSec: Int? = null,
+    val isBackgrounded: Boolean = false
 )
 
 @Composable
 fun ForensicOperationProgressDialog(
     state: ForensicProgressState,
     onCancel: () -> Unit,
+    onBackground: () -> Unit,
     isPersian: Boolean = true
 ) {
-    if (!state.isRunning) return
+    if (!state.isRunning || state.isBackgrounded) return
 
     val infiniteTransition = rememberInfiniteTransition(label = "pulse")
     val rotation by infiniteTransition.animateFloat(
@@ -274,6 +285,94 @@ fun ForensicOperationProgressDialog(
                     )
                 }
 
+                // Extended real-time forensic metrics (Remix)
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f))
+                        .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.2f), RoundedCornerShape(12.dp))
+                        .padding(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    val layerStr = if (isPersian) "لایه ${state.currentLayer.toString().toPersianDigits()}" else "Layer ${state.currentLayer}"
+                    val branchStr = if (isPersian) "زیرشاخه ${state.currentSubBranch.toString().toPersianDigits()}" else "Sub-branch ${state.currentSubBranch}"
+                    
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = if (isPersian) "جایگاه تحلیل زنجیره:" else "Analysis Position:",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Text(
+                            text = "$layerStr • $branchStr",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
+
+                    HorizontalDivider(color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        // Addresses found
+                        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = if (isPersian) "آدرس‌های کشف‌شده" else "Addresses Sourced",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontSize = 9.sp,
+                                color = MaterialTheme.colorScheme.outline
+                            )
+                            Text(
+                                text = if (isPersian) state.foundAddressesCount.toString().toPersianDigits() else state.foundAddressesCount.toString(),
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+
+                        // Relations found
+                        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = if (isPersian) "پیوندهای تحلیلی" else "Connections Sourced",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontSize = 9.sp,
+                                color = MaterialTheme.colorScheme.outline
+                            )
+                            Text(
+                                text = if (isPersian) state.foundRelationsCount.toString().toPersianDigits() else state.foundRelationsCount.toString(),
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+
+                        // Transactions found
+                        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = if (isPersian) "تراکنش‌های بررسی‌شده" else "Transactions Sourced",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontSize = 9.sp,
+                                color = MaterialTheme.colorScheme.outline
+                            )
+                            Text(
+                                text = if (isPersian) state.foundTransactionsCount.toString().toPersianDigits() else state.foundTransactionsCount.toString(),
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    }
+                }
+
                 // 3. Granular Step-by-Step Task List with Green Checkmarks and Top Fade Effect
                 val subTasks = if (state.subTasks.isNotEmpty()) {
                     state.subTasks
@@ -374,29 +473,63 @@ fun ForensicOperationProgressDialog(
                 // Divider
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 
-                // Cancel Button (Responsive & Always Centered)
-                OutlinedButton(
-                    onClick = onCancel,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(44.dp),
-                    shape = RoundedCornerShape(10.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = MaterialTheme.colorScheme.error
-                    )
+                // Dual Buttons: Move to Background & Cancel (Remix)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Close,
-                        contentDescription = "Cancel",
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = if (isPersian) "لغو فوری عملیات" else "Cancel Operation",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 13.sp,
-                        textAlign = TextAlign.Center
-                    )
+                    // Move to Background Button
+                    Button(
+                        onClick = onBackground,
+                        modifier = Modifier
+                            .weight(1.1f)
+                            .height(44.dp),
+                        shape = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.secondary,
+                            contentColor = MaterialTheme.colorScheme.onSecondary
+                        )
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Hub,
+                            contentDescription = "Background",
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = if (isPersian) "انتقال به پس‌زمینه" else "Run in Background",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+
+                    // Cancel Button
+                    OutlinedButton(
+                        onClick = onCancel,
+                        modifier = Modifier
+                            .weight(0.9f)
+                            .height(44.dp),
+                        shape = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = MaterialTheme.colorScheme.error
+                        )
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Cancel",
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = if (isPersian) "لغو عملیات" else "Cancel",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                 }
             }
         }

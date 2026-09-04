@@ -46,7 +46,7 @@ fun Phosphor3dIconBadge(
     Surface(
         modifier = modifier
             .size(size)
-            .shadow(elevation = 6.dp, shape = RoundedCornerShape(12.dp), ambientColor = themeColor, spotColor = themeColor),
+            .shadow(elevation = 2.dp, shape = RoundedCornerShape(12.dp)),
         shape = RoundedCornerShape(12.dp),
         color = Color.Transparent
     ) {
@@ -124,10 +124,8 @@ fun Blockchain3dBadge(
         modifier = modifier
             .size(size)
             .shadow(
-                elevation = 6.dp,
-                shape = CircleShape,
-                ambientColor = colors.first(),
-                spotColor = colors.last()
+                elevation = 2.dp,
+                shape = CircleShape
             ),
         shape = CircleShape,
         color = Color.Transparent
