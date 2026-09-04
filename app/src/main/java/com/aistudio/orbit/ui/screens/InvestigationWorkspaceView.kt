@@ -85,7 +85,7 @@ fun InvestigationWorkspaceView(
 
     val experienceMode by viewModel.experienceMode.collectAsState()
 
-    var stageStatuses by remember(investigationCase, osintReport, deepCandidates) {
+    val stageStatuses = remember(investigationCase, osintReport, deepCandidates) {
         val hasTransactions = investigationCase.transactions.isNotEmpty()
         val hasCounterparties = investigationCase.counterparties.isNotEmpty()
         val hasPatterns = investigationCase.matchedPatterns.isNotEmpty()
@@ -93,123 +93,38 @@ fun InvestigationWorkspaceView(
         val hasRisks = investigationCase.riskIndicators.isNotEmpty()
         val hasEvidence = investigationCase.evidenceLog.isNotEmpty()
         val hasHypotheses = investigationCase.hypotheses.isNotEmpty()
-
-        mutableStateOf(mapOf(
+        mapOf(
             InvestigationStage.START_CASE to StageStatus.COMPLETED,
             InvestigationStage.INITIAL_LEAD to StageStatus.COMPLETED,
             InvestigationStage.BLOCKCHAIN_DISCOVERY to if (hasTransactions) StageStatus.COMPLETED else StageStatus.CURRENT,
-            InvestigationStage.TRANSACTIONS_LEDGER to when {
-                hasCounterparties -> StageStatus.COMPLETED
-                hasTransactions -> StageStatus.CURRENT
-                else -> StageStatus.LOCKED
-            },
-            InvestigationStage.RELATED_ADDRESSES to when {
-                hasPatterns -> StageStatus.COMPLETED
-                hasCounterparties -> StageStatus.CURRENT
-                hasTransactions -> StageStatus.AVAILABLE
-                else -> StageStatus.LOCKED
-            },
-            InvestigationStage.PATTERN_ANALYSIS to when {
-                hasOsint -> StageStatus.COMPLETED
-                hasPatterns -> StageStatus.CURRENT
-                hasCounterparties -> StageStatus.AVAILABLE
-                else -> StageStatus.LOCKED
-            },
-            InvestigationStage.OSINT_REVIEW to when {
-                hasRisks -> StageStatus.COMPLETED
-                hasOsint -> StageStatus.CURRENT
-                hasPatterns -> StageStatus.AVAILABLE
-                else -> StageStatus.LOCKED
-            },
-            InvestigationStage.RISK_REVIEW to when {
-                hasEvidence -> StageStatus.COMPLETED
-                hasRisks -> StageStatus.CURRENT
-                hasOsint -> StageStatus.AVAILABLE
-                else -> StageStatus.LOCKED
-            },
-            InvestigationStage.EVIDENCE_REVIEW to when {
-                hasHypotheses -> StageStatus.COMPLETED
-                hasEvidence -> StageStatus.CURRENT
-                hasRisks -> StageStatus.AVAILABLE
-                else -> StageStatus.LOCKED
-            },
-            InvestigationStage.CONCLUSION to when {
-                hasHypotheses -> StageStatus.CURRENT
-                hasEvidence -> StageStatus.AVAILABLE
-                else -> StageStatus.LOCKED
-            },
-            InvestigationStage.REPORT to when {
-                hasEvidence -> StageStatus.AVAILABLE
-                else -> StageStatus.LOCKED
-            }
-        ))
+            InvestigationStage.TRANSACTIONS_LEDGER to when { hasCounterparties -> StageStatus.COMPLETED; hasTransactions -> StageStatus.CURRENT; else -> StageStatus.AVAILABLE },
+            InvestigationStage.RELATED_ADDRESSES to when { hasPatterns -> StageStatus.COMPLETED; hasCounterparties -> StageStatus.CURRENT; hasTransactions -> StageStatus.AVAILABLE; else -> StageStatus.LOCKED },
+            InvestigationStage.PATTERN_ANALYSIS to when { hasOsint -> StageStatus.COMPLETED; hasPatterns -> StageStatus.CURRENT; hasCounterparties -> StageStatus.AVAILABLE; else -> StageStatus.LOCKED },
+            InvestigationStage.OSINT_REVIEW to when { hasRisks -> StageStatus.COMPLETED; hasOsint -> StageStatus.CURRENT; hasPatterns -> StageStatus.AVAILABLE; else -> StageStatus.LOCKED },
+            InvestigationStage.RISK_REVIEW to when { hasEvidence -> StageStatus.COMPLETED; hasRisks -> StageStatus.CURRENT; hasOsint -> StageStatus.AVAILABLE; else -> StageStatus.LOCKED },
+            InvestigationStage.EVIDENCE_REVIEW to when { hasHypotheses -> StageStatus.COMPLETED; hasEvidence -> StageStatus.CURRENT; hasRisks -> StageStatus.AVAILABLE; else -> StageStatus.LOCKED },
+            InvestigationStage.CONCLUSION to when { hasHypotheses -> StageStatus.CURRENT; hasEvidence -> StageStatus.AVAILABLE; else -> StageStatus.LOCKED },
+            InvestigationStage.REPORT to if (hasEvidence) StageStatus.AVAILABLE else StageStatus.LOCKED
+        )
     }
-
-    val recommendedStage = stageStatuses.entries.firstOrNull { it.value == StageStatus.CURRENT }?.key ?: InvestigationStage.BLOCKCHAIN_DISCOVERY
-    var currentStage by remember(investigationCase.caseId) { mutableStateOf(recommendedStage) }
-
+    val currentStage = remember(investigationCase.caseId, investigationCase.activeStageId) {
+        InvestigationStage.values().firstOrNull { it.id == investigationCase.activeStageId } ?: InvestigationStage.BLOCKCHAIN_DISCOVERY
+    }
 
     var activeDomain by remember(investigationCase.caseId) { mutableStateOf(WorkspaceDomain.BLOCKCHAIN_ANALYTICS) }
     var activeBlockchainSubTab by remember(investigationCase.caseId) { mutableStateOf(BlockchainSubTab.OVERVIEW) }
 
     val syncStageToDomain: (InvestigationStage) -> Unit = { stage ->
-        currentStage = stage
-        val updated = stageStatuses.toMutableMap()
-        InvestigationStage.values().forEach { st ->
-            if (st.id < stage.id) {
-                if (updated[st] != StageStatus.SKIPPED) {
-                    updated[st] = StageStatus.COMPLETED
-                }
-            } else if (st == stage) {
-                if (updated[st] != StageStatus.SKIPPED) {
-                    updated[st] = StageStatus.CURRENT
-                }
-            } else {
-                if (updated[st] != StageStatus.SKIPPED && updated[st] != StageStatus.COMPLETED) {
-                    updated[st] = StageStatus.AVAILABLE
-                }
-            }
-        }
-        stageStatuses = updated
-
+        viewModel.setInvestigationStage(stage.id)
         when (stage) {
-            InvestigationStage.START_CASE -> {
-                activeDomain = WorkspaceDomain.BLOCKCHAIN_ANALYTICS
-                activeBlockchainSubTab = BlockchainSubTab.OVERVIEW
-            }
-            InvestigationStage.INITIAL_LEAD -> {
-                activeDomain = WorkspaceDomain.BLOCKCHAIN_ANALYTICS
-                activeBlockchainSubTab = BlockchainSubTab.OVERVIEW
-            }
-            InvestigationStage.BLOCKCHAIN_DISCOVERY -> {
-                activeDomain = WorkspaceDomain.BLOCKCHAIN_ANALYTICS
-                activeBlockchainSubTab = BlockchainSubTab.OVERVIEW
-            }
-            InvestigationStage.TRANSACTIONS_LEDGER -> {
-                activeDomain = WorkspaceDomain.BLOCKCHAIN_ANALYTICS
-                activeBlockchainSubTab = BlockchainSubTab.TRANSACTIONS_LEDGER
-            }
-            InvestigationStage.RELATED_ADDRESSES -> {
-                activeDomain = WorkspaceDomain.CASE_GRAPH
-            }
-            InvestigationStage.PATTERN_ANALYSIS -> {
-                activeDomain = WorkspaceDomain.TYPOLOGY_RULES
-            }
-            InvestigationStage.OSINT_REVIEW -> {
-                activeDomain = WorkspaceDomain.OSINT_INTELLIGENCE
-            }
-            InvestigationStage.RISK_REVIEW -> {
-                activeDomain = WorkspaceDomain.TYPOLOGY_RULES
-            }
-            InvestigationStage.EVIDENCE_REVIEW -> {
-                activeDomain = WorkspaceDomain.EVIDENCE_CHAIN
-            }
-            InvestigationStage.CONCLUSION -> {
-                activeDomain = WorkspaceDomain.AI_COPILOT
-            }
-            InvestigationStage.REPORT -> {
-                activeDomain = WorkspaceDomain.REPORTS_EXPORT
-            }
+            InvestigationStage.START_CASE, InvestigationStage.INITIAL_LEAD, InvestigationStage.BLOCKCHAIN_DISCOVERY -> { activeDomain = WorkspaceDomain.BLOCKCHAIN_ANALYTICS; activeBlockchainSubTab = BlockchainSubTab.OVERVIEW }
+            InvestigationStage.TRANSACTIONS_LEDGER -> { activeDomain = WorkspaceDomain.BLOCKCHAIN_ANALYTICS; activeBlockchainSubTab = BlockchainSubTab.TRANSACTIONS_LEDGER }
+            InvestigationStage.RELATED_ADDRESSES -> activeDomain = WorkspaceDomain.CASE_GRAPH
+            InvestigationStage.PATTERN_ANALYSIS, InvestigationStage.RISK_REVIEW -> activeDomain = WorkspaceDomain.TYPOLOGY_RULES
+            InvestigationStage.OSINT_REVIEW -> activeDomain = WorkspaceDomain.OSINT_INTELLIGENCE
+            InvestigationStage.EVIDENCE_REVIEW -> activeDomain = WorkspaceDomain.EVIDENCE_CHAIN
+            InvestigationStage.CONCLUSION -> activeDomain = WorkspaceDomain.AI_COPILOT
+            InvestigationStage.REPORT -> activeDomain = WorkspaceDomain.REPORTS_EXPORT
         }
     }
 
@@ -493,10 +408,12 @@ fun InvestigationWorkspaceView(
                         }
 
                         if (experienceMode == ExperienceMode.GUIDED_INVESTIGATION) {
-                            androidx.compose.foundation.lazy.LazyColumn(
-                                modifier = Modifier.fillMaxSize()
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                item {
                                     GuideStageTemplate(
                                         stage = currentStage,
                                         case = investigationCase,
@@ -505,15 +422,16 @@ fun InvestigationWorkspaceView(
                                             syncStageToDomain(nextStage)
                                         },
                                         onSkipStage = { reason ->
-                                            val updated = stageStatuses.toMutableMap()
-                                            updated[currentStage] = StageStatus.SKIPPED
-                                            stageStatuses = updated
-                                            Toast.makeText(context, if (isFa) "مرحله با موفقیت رد شد: $reason" else "Stage skipped: $reason", Toast.LENGTH_LONG).show()
+                                            val nextStage = InvestigationStage.values()
+                                                .getOrNull(currentStage.ordinal + 1)
+                                                ?: InvestigationStage.REPORT
+                                            viewModel.setInvestigationStage(nextStage.id)
+                                            Toast.makeText(context, if (isFa) "مرحله رد شد: $reason" else "Stage skipped: $reason", Toast.LENGTH_LONG).show()
                                         }
                                     ) {
                                         // Include dead-end checks dynamically
                                         val hasNoData = when (currentStage) {
-                                            InvestigationStage.BLOCKCHAIN_DISCOVERY -> investigationCase.balanceSat == 0L
+                                            InvestigationStage.BLOCKCHAIN_DISCOVERY -> investigationCase.transactions.isEmpty() && investigationCase.totalTransactionsFound == 0
                                             InvestigationStage.TRANSACTIONS_LEDGER -> investigationCase.transactions.isEmpty()
                                             InvestigationStage.RELATED_ADDRESSES -> investigationCase.counterparties.isEmpty()
                                             else -> false
@@ -528,13 +446,16 @@ fun InvestigationWorkspaceView(
                                                 }
                                             )
                                         } else {
-                                            Box(modifier = Modifier.fillMaxWidth().height(400.dp)) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .weight(1f, fill = true)
+                                            ) {
                                                 currentContent()
                                             }
                                         }
                                     }
                                 }
-                            }
                         } else {
                             // Analyst Mode: raw display
                             currentContent()

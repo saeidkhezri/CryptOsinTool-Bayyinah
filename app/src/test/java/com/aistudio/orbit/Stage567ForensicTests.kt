@@ -201,6 +201,7 @@ class Stage567ForensicTests {
 
     @Test
     fun testRoleBasedPermissionsAndAuthentication() {
+        AuthManager.seedTestUsersForTestingOnly()
         val admin = AuthManager.usersList.value.find { it.userId == "usr_admin" }
         assertNotNull(admin)
         assertEquals(UserRole.ADMINISTRATOR, admin!!.role)

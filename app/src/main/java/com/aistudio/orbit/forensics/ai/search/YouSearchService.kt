@@ -14,10 +14,10 @@ import java.util.UUID
 /**
  * YouSearchService
  * Official You.com Search API (Prompt 3 §4, Master Instruction §23)
- * Endpoint: POST https://api.ydc-index.io/search
+ * Endpoint: POST https://ydc-index.io/v1/search
  */
 class YouSearchService(
-    private val endpointUrl: String = "https://api.ydc-index.io/search"
+    private val endpointUrl: String = "https://ydc-index.io/v1/search"
 ) {
     private val client = ForensicHttpClientFactory.createProviderClient("YouSearch", connectTimeoutSec = 20, readTimeoutSec = 30)
     private val jsonMedia = "application/json; charset=utf-8".toMediaType()
@@ -62,7 +62,6 @@ class YouSearchService(
 
         val httpRequest = Request.Builder()
             .url(endpointUrl)
-            .addHeader("Authorization", "Bearer ${apiKey.trim()}")
             .addHeader("X-API-Key", apiKey.trim())
             .addHeader("Content-Type", "application/json")
             .addHeader("Accept", "application/json")
@@ -114,9 +113,10 @@ class YouSearchService(
                                     id = "CAND_${UUID.randomUUID().toString().take(8)}",
                                     claim = if (snippet.isNotBlank()) snippet else title,
                                     source = source,
-                                    confidence = (0.80f - (i * 0.02f)).coerceAtLeast(0.40f),
+                                    confidence = 0.40f, // Search relevance is not evidentiary confidence.
+                                    
                                     status = EvidenceCandidateStatus.PENDING_REVIEW,
-                                    analystNotes = "Extracted from You.com Web Search ($domain)"
+                                    analystNotes = "Search candidate only. Requires analyst review and source validation before admission as evidence. Domain=$domain"
                                 )
                             )
                         }

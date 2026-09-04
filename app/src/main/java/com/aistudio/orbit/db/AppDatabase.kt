@@ -34,8 +34,8 @@ import com.aistudio.orbit.model.InvestigationCase
         ProviderRunEntity::class,
         ReportEntity::class
     ],
-    version = 7,
-    exportSchema = false
+    version = 8,
+    exportSchema = true
 )
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
@@ -329,6 +329,16 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_7_8 = object : Migration(7, 8) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE investigation_cases ADD COLUMN activeStageId INTEGER NOT NULL DEFAULT 3")
+                db.execSQL("ALTER TABLE investigation_cases ADD COLUMN workflowStateKey TEXT NOT NULL DEFAULT 'DISCOVERING'")
+                db.execSQL("ALTER TABLE investigation_cases ADD COLUMN experienceModeKey TEXT NOT NULL DEFAULT 'GUIDED_INVESTIGATION'")
+                db.execSQL("ALTER TABLE investigation_cases ADD COLUMN investigationGoal TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE investigation_cases ADD COLUMN analysisRevision INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
         fun getDatabase(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -342,8 +352,7 @@ abstract class AppDatabase : RoomDatabase() {
                 // 2. DO NOT rely on fallbackToDestructiveMigration() in production release builds.
                 //    It is left here only to prevent unhandled crashes during debug prototyping,
                 //    but explicit migration paths take precedence and preserve forensic data integrity.
-                .addMigrations(MIGRATION_6_7)
-                .fallbackToDestructiveMigration()
+                .addMigrations(MIGRATION_6_7, MIGRATION_7_8)
                 .build()
                 INSTANCE = instance
                 instance

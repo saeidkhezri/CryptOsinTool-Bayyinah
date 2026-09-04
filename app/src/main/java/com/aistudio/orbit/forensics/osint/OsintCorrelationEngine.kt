@@ -1,53 +1,63 @@
 package com.aistudio.orbit.forensics.osint
 
-import com.aistudio.orbit.model.InvestigationCase
-import com.aistudio.orbit.model.PatternMatchResult
-import com.aistudio.orbit.model.EvidenceItem
-import com.aistudio.orbit.model.EvidenceSupportLevel
-import com.aistudio.orbit.forensics.analysis.HypothesisEngine
-import com.aistudio.orbit.model.ConfidenceLevel
-import java.util.UUID
+import com.aistudio.orbit.forensics.analysis.ConfidenceEngine
+import com.aistudio.orbit.model.*
 
+/** Correlates observations without turning correlation into identity or criminal attribution. */
 object OsintCorrelationEngine {
+    data class CorrelationObservation(
+        val code: String,
+        val title: String,
+        val description: String,
+        val confidence: ConfidenceLevel,
+        val supportingEvidenceIds: List<String>,
+        val contradictoryEvidenceIds: List<String> = emptyList()
+    )
 
-    fun generateCorrelationHypotheses(
-        caseObj: InvestigationCase,
-        osintReport: OsintAnalysisReport?
-    ): List<com.aistudio.orbit.model.Hypothesis> {
-        val newHypotheses = mutableListOf<com.aistudio.orbit.model.Hypothesis>()
-        
-        if (osintReport == null) return newHypotheses
-
-        // Example Correlation: High Velocity Transit + Tor/VPN
+    fun generateCorrelationObservations(caseObj: InvestigationCase, osintReport: OsintAnalysisReport?): List<CorrelationObservation> {
+        if (osintReport == null) return emptyList()
+        val out = mutableListOf<CorrelationObservation>()
         val highVelocity = caseObj.matchedPatterns.find { it.patternCode == "PTN-010" }
         if (highVelocity != null && osintReport.torVpnProbability > 50f) {
-            newHypotheses.add(
-                HypothesisEngine.createHypothesis(
-                    caseId = caseObj.id,
-                    investigationId = caseObj.id,
-                    title = "Automated Obfuscation Network (Correlated)",
-                    description = "On-chain High Velocity Transit correlates with off-chain Tor/VPN routing, indicating an automated obfuscation service rather than manual user transfers.",
-                    confidence = ConfidenceLevel.HIGH_CONFIDENCE,
-                    author = "OSINT Correlator Engine"
-                )
+            out += CorrelationObservation(
+                "CORR-001", "Temporal/network correlation",
+                "A high-velocity on-chain observation co-occurs with an OSINT-derived Tor/VPN probability above the configured threshold. This is a correlation only and does not establish common ownership or intent.",
+                ConfidenceLevel.MEDIUM_CONFIDENCE, highVelocity.evidenceIds
             )
         }
-
-        // Example Correlation: Mixer + Extracted Entities
-        val mixerPattern = caseObj.matchedPatterns.find { it.category.name == "MIXER_OBFUSCATION" }
+        val mixerPattern = caseObj.matchedPatterns.find { it.category.name.contains("MIXER", ignoreCase=true) }
         if (mixerPattern != null && osintReport.leakRecords.isNotEmpty()) {
-             newHypotheses.add(
-                HypothesisEngine.createHypothesis(
-                    caseId = caseObj.id,
-                    investigationId = caseObj.id,
-                    title = "Deanonymized Mixer Participant (Correlated)",
-                    description = "Mixer obfuscation pattern detected on-chain, but OSINT leak records expose the underlying entity.",
-                    confidence = ConfidenceLevel.MEDIUM_CONFIDENCE,
-                    author = "OSINT Correlator Engine"
-                )
+            out += CorrelationObservation(
+                "CORR-002", "Mixer-related public-source correlation",
+                "A mixer-related on-chain pattern co-occurs with public leak records. The records require independent source validation and do not by themselves identify an operator or participant.",
+                ConfidenceLevel.LOW_CONFIDENCE, mixerPattern.evidenceIds
             )
         }
+        return out
+    }
 
-        return newHypotheses
+    /** Backward-compatible API. Hypotheses are created only from reviewed evidence. */
+    fun generateCorrelationHypotheses(caseObj: InvestigationCase, osintReport: OsintAnalysisReport?): List<Hypothesis> {
+        val observations = generateCorrelationObservations(caseObj, osintReport)
+        return observations.mapNotNull { obs ->
+            if (obs.supportingEvidenceIds.isEmpty()) return@mapNotNull null
+            var h = com.aistudio.orbit.forensics.analysis.HypothesisEngine.createHypothesis(
+                caseId=caseObj.caseId, investigationId=caseObj.caseId,
+                title=obs.title,
+                description=obs.description,
+                confidence=obs.confidence,
+                author="Correlation Engine"
+            )
+            obs.supportingEvidenceIds.forEach { id ->
+                h = com.aistudio.orbit.forensics.analysis.HypothesisEngine.addEvidenceLink(
+                    hypothesis = h,
+                    evidenceId = id,
+                    supportLevel = EvidenceSupportLevel.SUPPORTING,
+                    analystNote = "Correlated evidence from OSINT engine",
+                    author = "Correlation Engine"
+                )
+            }
+            h
+        }
     }
 }

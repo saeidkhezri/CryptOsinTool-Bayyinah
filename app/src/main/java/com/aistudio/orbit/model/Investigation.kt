@@ -194,7 +194,14 @@ data class InvestigationCase(
     val evidenceLog: List<EvidenceItem> = emptyList(),
     val riskIndicators: List<RiskIndicator> = emptyList(),
     val matchedPatterns: List<PatternMatchResult> = emptyList(),
-    val hypotheses: List<Hypothesis> = emptyList()
+    val hypotheses: List<Hypothesis> = emptyList(),
+    // Persisted workflow state. These fields are the single durable source of truth for
+    // the investigation route; UI screens must not invent their own stage/state.
+    val activeStageId: Int = 1,
+    val workflowStateKey: String = "DISCOVERING",
+    val experienceModeKey: String = "GUIDED_INVESTIGATION",
+    val investigationGoal: String = "",
+    val analysisRevision: Int = 0
 ) {
     val balanceBtc: Double get() = balanceSat.toDouble() / 100_000_000.0
     val totalReceivedBtc: Double get() = totalReceivedSat.toDouble() / 100_000_000.0

@@ -96,35 +96,26 @@ class CryptoApisProvider(
                         val item = json.optJSONObject("data")?.optJSONObject("item")
 
                         val confirmedBalance = item?.optJSONObject("confirmedBalance")
-                        val balanceStr = confirmedBalance?.optString("amount", "0") ?: "0"
+                        val balanceStr = confirmedBalance?.optString("amount", "") ?: ""
+                        if (balanceStr.isBlank()) return@use Result.failure(IllegalStateException("CryptoAPIs response did not contain confirmed balance"))
                         val balanceSat = try {
-                            (balanceStr.toDouble() * 100_000_000).toLong()
+                            (balanceStr.toBigDecimal().movePointRight(8)).toLong()
                         } catch (e: Exception) {
-                            0L
+                            return@use Result.failure(IllegalStateException("CryptoAPIs returned an invalid balance amount"))
                         }
 
-                        val totalReceivedStr = item?.optJSONObject("totalReceived")?.optString("amount", balanceStr) ?: balanceStr
-                        val totalReceivedSat = try {
-                            (totalReceivedStr.toDouble() * 100_000_000).toLong()
-                        } catch (e: Exception) {
-                            balanceSat
-                        }
-
-                        val totalSpentStr = item?.optJSONObject("totalSpent")?.optString("amount", "0") ?: "0"
-                        val totalSentSat = try {
-                            (totalSpentStr.toDouble() * 100_000_000).toLong()
-                        } catch (e: Exception) {
-                            0L
-                        }
-
-                        val txCount = item?.optInt("transactionsCount", 1) ?: 1
+                        val totalReceivedStr = item?.optJSONObject("totalReceived")?.optString("amount", "") ?: ""
+                        val totalReceivedSat = totalReceivedStr.toBigDecimalOrNull()?.movePointRight(8)?.toLong()
+                        val totalSpentStr = item?.optJSONObject("totalSpent")?.optString("amount", "") ?: ""
+                        val totalSentSat = totalSpentStr.toBigDecimalOrNull()?.movePointRight(8)?.toLong()
+                        val txCount = item?.optInt("transactionsCount", 0) ?: 0
 
                         val dto = AddressOverviewDto(
                             address = address.trim(),
                             network = network,
                             balanceSat = balanceSat,
-                            totalReceivedSat = totalReceivedSat,
-                            totalSentSat = totalSentSat,
+                            totalReceivedSat = totalReceivedSat ?: 0L,
+                            totalSentSat = totalSentSat ?: 0L,
                             transactionCount = txCount,
                             providerName = name,
                             notes = "CryptoAPIs Verified Ledger Query (Chain: ${getChainPath()})"
@@ -173,12 +164,13 @@ class CryptoApisProvider(
                         if (items != null) {
                             for (i in 0 until items.length()) {
                                 val item = items.optJSONObject(i) ?: continue
-                                val txid = item.optString("transactionId", item.optString("transactionHash", item.optString("hash", "tx_$i")))
-                                val timestamp = item.optLong("timestamp", System.currentTimeMillis() / 1000)
-                                
-                                // Strictly distinguish block hash from block height (Master Instruction §26)
+                                val txid = item.optString("transactionId", item.optString("transactionHash", item.optString("hash", ""))).trim()
+                                if (txid.isBlank()) continue
+                                val timestamp = item.optLong("timestamp", 0L)
+                                if (timestamp <= 0L) continue
+                                // Strictly distinguish block hash from block height.
                                 val blockHeight = item.optLong("minedInBlockHeight", 0L)
-                                val blockHash = item.optString("minedInBlockHash", "")
+                                val blockHash = item.optString("minedInBlockHash", "").trim()
 
                                 val feeObj = item.optJSONObject("fee")
                                 val feeSat = try {
@@ -234,7 +226,7 @@ class CryptoApisProvider(
                     }
                     401, 403 -> Result.failure(IllegalStateException("CryptoAPIs Authentication failed: Invalid API key"))
                     429 -> Result.failure(IllegalStateException("CryptoAPIs Rate limit exceeded (HTTP 429)"))
-                    404 -> Result.success(emptyList()) // No transactions yet
+                    404 -> Result.failure(IllegalStateException("CryptoAPIs returned HTTP 404; the provider did not confirm an empty ledger."))
                     else -> Result.failure(IllegalStateException("CryptoAPIs returned HTTP ${response.code}"))
                 }
             }

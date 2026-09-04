@@ -349,7 +349,7 @@ fun DashboardView(
             }
 
             // Active Case Guided Action & Roadmap Banner
-            if (activeCase != null) {
+            activeCase?.let { case ->
                 item {
                     ForensicSectionHeader(
                         title = if (isPersian) "پرونده فعال تحت ردیابی زنده" else "Active Case LIVE Stream",
@@ -372,7 +372,7 @@ fun DashboardView(
                             ) {
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
-                                        text = activeCase!!.caseName,
+                                        text = case.caseName,
                                         style = MaterialTheme.typography.titleMedium,
                                         fontWeight = FontWeight.Bold,
                                         color = MaterialTheme.colorScheme.onSurface,
@@ -380,7 +380,7 @@ fun DashboardView(
                                         overflow = TextOverflow.Ellipsis
                                     )
                                     Text(
-                                        text = "${if (isPersian) "کلاسه: " else "Ref: "}${activeCase!!.referenceNumber.ifBlank { "N/A" }}",
+                                        text = "${if (isPersian) "کلاسه: " else "Ref: "}${case.referenceNumber.ifBlank { "N/A" }}",
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.outline
                                     )
@@ -390,7 +390,7 @@ fun DashboardView(
                                     color = MaterialTheme.colorScheme.primaryContainer
                                 ) {
                                     Text(
-                                        text = activeCase!!.network.symbol,
+                                        text = case.network.symbol,
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.onPrimaryContainer,
                                         modifier = Modifier.padding(horizontal = ForensicSpacing.sm, vertical = ForensicSpacing.xxs),
@@ -400,7 +400,7 @@ fun DashboardView(
                             }
 
                             ForensicAddressText(
-                                address = activeCase!!.targetAddress,
+                                address = case.targetAddress,
                                 label = if (isPersian) "آدرس سرنخ تحت ردیابی:" else "Target Address:",
                                 isPersian = isPersian
                             )
@@ -410,15 +410,10 @@ fun DashboardView(
                                 modifier = Modifier.fillMaxWidth(),
                                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f))
                             ) {
-                                val stageInfo = remember(activeCase) { getCaseCompletedStageInfo(activeCase!!, isPersian) }
+                                val stageInfo = remember(activeCase) { getCaseCompletedStageInfo(case, isPersian) }
                                 val activeNextAction = remember(activeCase) {
-                                    val currentStageEnum = when {
-                                        activeCase!!.transactions.isEmpty() && activeCase!!.balanceSat == 0L -> InvestigationStage.INITIAL_LEAD
-                                        activeCase!!.transactions.isEmpty() -> InvestigationStage.BLOCKCHAIN_DISCOVERY
-                                        activeCase!!.counterparties.isEmpty() -> InvestigationStage.TRANSACTIONS_LEDGER
-                                        else -> InvestigationStage.RELATED_ADDRESSES
-                                    }
-                                    calculateNextBestAction(currentStageEnum, activeCase!!)
+                                    val currentStageEnum = InvestigationStage.values().firstOrNull { it.id == case.activeStageId } ?: InvestigationStage.BLOCKCHAIN_DISCOVERY
+                                    calculateNextBestAction(currentStageEnum, case)
                                 }
 
                                 Row(
@@ -458,7 +453,7 @@ fun DashboardView(
                             }
 
                             Button(
-                                onClick = { onNavigateToCase(activeCase!!) },
+                                onClick = { onNavigateToCase(case) },
                                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                                 modifier = Modifier.fillMaxWidth(),
                                 shape = RoundedCornerShape(8.dp)
@@ -637,15 +632,7 @@ fun CaseCommandCenterItem(
 
 fun getCaseCompletedStageInfo(case: InvestigationCase, isPersian: Boolean): Pair<Float, String> {
     val totalStages = 11
-    val currentStageId = when {
-        case.transactions.isEmpty() && case.balanceSat == 0L -> 2 // Initial Lead
-        case.transactions.isEmpty() -> 3 // Blockchain Discovery
-        case.counterparties.isEmpty() -> 4 // Transactions Ledger
-        case.matchedPatterns.isEmpty() -> 5 // Related Addresses
-        case.evidenceLog.isEmpty() -> 6 // Pattern Analysis
-        case.hypotheses.isEmpty() -> 7 // OSINT
-        else -> 10 // Conclusion / Report
-    }
+    val currentStageId = case.activeStageId.coerceIn(1, 11)
     
     val progress = currentStageId.toFloat() / totalStages.toFloat()
     val stageName = when (currentStageId) {

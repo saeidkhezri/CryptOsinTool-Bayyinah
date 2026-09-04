@@ -583,7 +583,7 @@ object PdfReportExporter {
                 paint.color = Color.DKGRAY
                 paint.textSize = 7.5f
                 paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
-                canvas4.drawText("شناسه کارشناس: MSKPG-3916 | رتبه صلاحیت: فارنزیک جرایم مالی سایبری", 550f, y4 + 38f, paint)
+                canvas4.drawText("شناسه کارشناس: ${case.investigatorName} | رتبه صلاحیت: فارنزیک جرایم مالی سایبری", 550f, y4 + 38f, paint)
                 canvas4.drawText("تاریخ و زمان تایید نهایی: ${PersianDateUtils.getPersianDateTime(System.currentTimeMillis())}", 550f, y4 + 54f, paint)
                 canvas4.drawText("وضعیت امضا: تایید شده با کلید اختصاصی سامانه بیِّنة (VALIDATED)", 550f, y4 + 70f, paint)
                 paint.textAlign = Paint.Align.LEFT
@@ -596,7 +596,7 @@ object PdfReportExporter {
                 paint.color = Color.DKGRAY
                 paint.textSize = 7.5f
                 paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
-                canvas4.drawText("Investigator ID: MSKPG-3916 | Certification: ISO 27037 Certified Forensic Examiner", 45f, y4 + 38f, paint)
+                canvas4.drawText("Investigator ID: ${case.investigatorName} | Certification: Investigator record from case metadata", 45f, y4 + 38f, paint)
                 canvas4.drawText("Verification Timestamp: ${Date()}", 45f, y4 + 54f, paint)
                 canvas4.drawText("Digital Signature Status: CRYPTOGRAPHICALLY VALIDATED (BAYYINAH SUITE)", 45f, y4 + 70f, paint)
             }
@@ -665,7 +665,7 @@ object PdfReportExporter {
             paint.color = Color.parseColor("#94A3B8")
             paint.textSize = 8f
             paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
-            val timeLabel = "تاریخ گزارش: ${PersianDateUtils.getPersianDateTime(System.currentTimeMillis())} | کارشناس: MSKPG-3916"
+            val timeLabel = "تاریخ گزارش: ${PersianDateUtils.getPersianDateTime(System.currentTimeMillis())} | کارشناس: ${case.investigatorName}"
             canvas.drawText(timeLabel, 495f, 105f, paint)
             paint.textAlign = Paint.Align.LEFT
         } else {
@@ -693,7 +693,7 @@ object PdfReportExporter {
             paint.color = Color.parseColor("#94A3B8")
             paint.textSize = 8f
             paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
-            val timeLabel = "Generated: ${Date()} | Investigator: MSKPG-3916"
+            val timeLabel = "Generated: ${Date()} | Investigator: ${case.investigatorName}"
             canvas.drawText(timeLabel, 100f, 105f, paint)
         }
     }

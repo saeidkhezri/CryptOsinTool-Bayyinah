@@ -13,13 +13,13 @@ import java.util.UUID
 /**
  * YouResearchService
  * Official You.com Deep Research API (Prompt 3 §4, Master Instruction §23)
- * Endpoint: POST https://api.ydc-index.io/research
+ * Endpoint: POST https://api.you.com/v1/research
  *
  * Enforces evidence integrity: Research outputs are emitted as Source & Evidence Candidates,
  * requiring explicit investigator review before becoming permanent evidence.
  */
 class YouResearchService(
-    private val endpointUrl: String = "https://api.ydc-index.io/research"
+    private val endpointUrl: String = "https://api.you.com/v1/research"
 ) {
     private val client = ForensicHttpClientFactory.createProviderClient("YouResearch", connectTimeoutSec = 30, readTimeoutSec = 60)
     private val jsonMedia = "application/json; charset=utf-8".toMediaType()
@@ -66,7 +66,6 @@ class YouResearchService(
 
         val httpRequest = Request.Builder()
             .url(endpointUrl)
-            .addHeader("Authorization", "Bearer ${apiKey.trim()}")
             .addHeader("X-API-Key", apiKey.trim())
             .addHeader("Content-Type", "application/json")
             .addHeader("Accept", "application/json")

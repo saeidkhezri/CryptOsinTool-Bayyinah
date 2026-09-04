@@ -235,7 +235,7 @@ fun ForensicOperationProgressDialog(
                 }
 
                 // 2. Determinate Progress Bar & Percentage
-                val progressVal = state.progress ?: 0.35f
+                val progressVal = (state.progress ?: 0.35f).coerceIn(0f, 1f)
                 Column(
                     modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(4.dp)
@@ -291,10 +291,11 @@ fun ForensicOperationProgressDialog(
                         .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
                         .padding(horizontal = 10.dp, vertical = 6.dp)
                 ) {
-                    Box(modifier = Modifier.fillMaxSize()) {
-                        LazyColumn(
+                    LazyColumn(
                             state = listState,
-                            modifier = Modifier.fillMaxSize(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(min = 96.dp, max = 160.dp),
                             verticalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             itemsIndexed(subTasks) { index, task ->
@@ -357,7 +358,7 @@ fun ForensicOperationProgressDialog(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(16.dp)
-                                .align(Alignment.TopCenter)
+                                .align(Alignment.CenterHorizontally)
                                 .background(
                                     Brush.verticalGradient(
                                         colors = listOf(
@@ -400,7 +401,6 @@ fun ForensicOperationProgressDialog(
             }
         }
     }
-}
 
 @Composable
 private fun PhosphorLedBadge(

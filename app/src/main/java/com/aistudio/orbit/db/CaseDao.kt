@@ -20,4 +20,20 @@ interface CaseDao {
     
     @Query("SELECT * FROM investigation_cases WHERE caseId = :id LIMIT 1")
     suspend fun getCaseById(id: String): InvestigationCase?
+
+    @Query("""
+        UPDATE investigation_cases
+        SET activeStageId = :stageId,
+            workflowStateKey = :stateKey,
+            experienceModeKey = :modeKey,
+            updatedTimestamp = :updatedAt
+        WHERE caseId = :caseId
+    """)
+    suspend fun updateWorkflowState(
+        caseId: String,
+        stageId: Int,
+        stateKey: String,
+        modeKey: String,
+        updatedAt: Long = System.currentTimeMillis()
+    )
 }
