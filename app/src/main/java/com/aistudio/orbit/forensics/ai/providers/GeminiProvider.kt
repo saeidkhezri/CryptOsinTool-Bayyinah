@@ -10,9 +10,8 @@ class GeminiProvider : AiProvider {
     override val name: String = "Google Gemini"
     override val version: String = "v1beta"
     override val defaultModels: List<String> = listOf(
-        "gemini-1.5-pro",
-        "gemini-1.5-flash",
-        "gemini-2.0-flash-exp"
+        "gemini-3.5-flash",
+        "gemini-3.1-pro-preview"
     )
     override val providerType: AiProviderType = AiProviderType.GEMINI
     override val costCategory: String = "Usage-based"

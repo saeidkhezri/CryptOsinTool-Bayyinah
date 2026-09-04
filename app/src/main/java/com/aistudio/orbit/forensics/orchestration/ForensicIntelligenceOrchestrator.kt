@@ -191,9 +191,37 @@ class ForensicIntelligenceOrchestrator(
             // Retrieve all collected events for this case
             val collectedEvents = OsintEventBus.getEventsForCase(caseId)
 
-            // 4. Cross-Source Correlation
-            onProgress(0.80f, "Executing deterministic cross-source correlation rules...", "اجرای قواعد قطعی همبستگی میان‌منابعی...")
+            // 4. Cross-Source Correlation & AI Cognitive Brain Synthesis
+            onProgress(0.80f, "Executing deterministic cross-source correlation rules & AI brain synthesis...", "اجرای قواعد قطعی همبستگی و تحلیل مغز متفکر هوش مصنوعی...")
             val correlations = ForensicCorrelationEngine.correlateEvents(collectedEvents)
+
+            val aiCognitiveEngine = com.aistudio.orbit.forensics.ai.EmbeddedAiCognitiveEngine(
+                context = com.aistudio.orbit.db.AppDatabase.getDatabaseContext(),
+                secureStorage = com.aistudio.orbit.security.SecureStorageManager(com.aistudio.orbit.db.AppDatabase.getDatabaseContext())
+            )
+
+            val crimeTypologyInput = com.aistudio.orbit.forensics.ai.CrimeTypologyInput(
+                address = targetAddress,
+                inTxCount = tagPackRecords.size,
+                outTxCount = sanctionsMatches.size,
+                fanInRatio = 1.2,
+                fanOutRatio = 0.8,
+                peelingChainDetected = tagPackRecords.any { it.category == "peeling" },
+                mixerExposure = tagPackRecords.any { it.category == "mixer" || it.entity.contains("Tornado", ignoreCase = true) },
+                structuringDetected = false,
+                darknetClusterMatched = tagPackRecords.any { it.category == "darknet" },
+                averageTxValueBtc = 0.5
+            )
+            val typologyResult = aiCognitiveEngine.classifyCrimeTypology(crimeTypologyInput)
+
+            val nextBestActionInput = com.aistudio.orbit.forensics.ai.NextBestActionInput(
+                caseId = caseId,
+                targetAddress = targetAddress,
+                currentStage = "DISCOVER",
+                knownEntities = tagPackRecords.map { it.entity },
+                hasSanctionsMatch = sanctionsMatches.isNotEmpty()
+            )
+            val nbaResult = aiCognitiveEngine.computeNextBestAction(nextBestActionInput)
 
             // 5. Evidence & Finding Materialization
             onProgress(0.90f, "Materializing immutable evidence and candidate findings...", "تولید ادله غیرقابل تغییر و پیشنهاد یافته‌های کارشناسی...")

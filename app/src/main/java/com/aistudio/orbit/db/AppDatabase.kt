@@ -339,7 +339,15 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        @Volatile
+        private var appContext: Context? = null
+
+        fun getDatabaseContext(): Context {
+            return appContext ?: throw IllegalStateException("Database context not initialized")
+        }
+
         fun getDatabase(context: Context): AppDatabase {
+            appContext = context.applicationContext
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
                     context.applicationContext,

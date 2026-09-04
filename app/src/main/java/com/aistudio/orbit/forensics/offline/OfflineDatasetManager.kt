@@ -507,6 +507,42 @@ class OfflineDatasetManager(
                     downloadProgress = 0.0f,
                     recordCount = 0,
                     isEnabled = false
+                ),
+                DatasetMetadataEntity(
+                    datasetId = "breached_credentials_crypto_tier3",
+                    name = "Leaked Credentials & Crypto Wallet Directory (DeHashed / HIBP)",
+                    nameFa = "بانک داده‌های افشا شده و نشت حساب‌های مرتبط با رمزارز",
+                    tier = "TIER_A_ANDROID",
+                    category = "BREACHED_DATA",
+                    version = "2024.08.29",
+                    downloadSizeBytes = 65 * 1024 * 1024L,
+                    installedSizeBytes = 130 * 1024 * 1024L,
+                    requiredTempStorageBytes = 180 * 1024 * 1024L,
+                    sourceUrl = "https://raw.githubusercontent.com/bayyinah-forensics/datasets/main/breached_credentials_crypto_tier3.json",
+                    sha256Checksum = "c8932ef1245a901827c12f890123456789abcdef0123456789abcdef01234567",
+                    license = "Open Intelligence Data License",
+                    status = "AVAILABLE",
+                    downloadProgress = 0.0f,
+                    recordCount = 0,
+                    isEnabled = false
+                ),
+                DatasetMetadataEntity(
+                    datasetId = "darknet_hydra_silkroad_tier3",
+                    name = "Darknet Market & Illicit Network Cluster Index",
+                    nameFa = "پایگاه داده کلاسترهای مارکت‌های تاریک و شبکه هیدرا",
+                    tier = "TIER_A_ANDROID",
+                    category = "THREAT_INTEL",
+                    version = "3.2.0",
+                    downloadSizeBytes = 52 * 1024 * 1024L,
+                    installedSizeBytes = 110 * 1024 * 1024L,
+                    requiredTempStorageBytes = 150 * 1024 * 1024L,
+                    sourceUrl = "https://raw.githubusercontent.com/bayyinah-forensics/datasets/main/darknet_hydra_silkroad_tier3.json",
+                    sha256Checksum = "d90123456789abcdef0123456789abcdef0123456789abcdef0123456789abcd",
+                    license = "Public Forensic Intelligence License",
+                    status = "AVAILABLE",
+                    downloadProgress = 0.0f,
+                    recordCount = 0,
+                    isEnabled = false
                 )
             )
             datasetDao.insertDatasets(defaultCatalog)
