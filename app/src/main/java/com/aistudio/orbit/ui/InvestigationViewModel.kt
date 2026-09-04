@@ -55,6 +55,7 @@ class InvestigationViewModel(application: Application) : AndroidViewModel(applic
 
     val secureStorage = SecureStorageManager(application)
     val providerManager = ProviderManager(secureStorageManager = secureStorage)
+    val providerHealthService = com.aistudio.orbit.provider.ProviderHealthService(providerManager)
     val investigationRepo = InvestigationRepository(application)
     val settingsRepo = SettingsRepository(application)
     val aiSettingsRepo = AiSettingsRepo(application, secureStorage)
@@ -146,6 +147,7 @@ class InvestigationViewModel(application: Application) : AndroidViewModel(applic
 
     init {
         com.aistudio.orbit.forensics.currency.CurrencyConverter.initialize(osintDatabase.priceRateDao())
+        providerHealthService.startPeriodicChecks(intervalMs = 60000L) // every 60 seconds
         viewModelScope.launch {
             com.aistudio.orbit.forensics.currency.CurrencyConverter.loadRatesFromRoom()
             try {
@@ -1301,6 +1303,11 @@ class InvestigationViewModel(application: Application) : AndroidViewModel(applic
             osintReport = currentOsint,
             language = language
         )
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        providerHealthService.stopPeriodicChecks()
     }
 }
 

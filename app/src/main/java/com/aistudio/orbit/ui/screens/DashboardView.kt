@@ -53,6 +53,7 @@ fun DashboardView(
     val strings = AppLocalization.getStrings(language)
     val cases by viewModel.investigationRepo.cases.collectAsState(initial = emptyList())
     val activeCase by viewModel.activeCase.collectAsState()
+    val providerConfigs by viewModel.providerManager.providerConfigs.collectAsState()
 
     BoxWithConstraints(
         modifier = Modifier.fillMaxSize(),
@@ -242,24 +243,21 @@ fun DashboardView(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(ForensicSpacing.xs)
                 ) {
-                    val gateways = remember {
-                        listOf(
-                            Triple(if (isPersian) "رایانش You.com" else "You.com Intelligence", Color(0xFF00E5FF), 24),
-                            Triple(if (isPersian) "داده بلاکچین" else "Blockchain Data", Color(0xFF10B981), 12),
-                            Triple(if (isPersian) "حافظه محلی" else "Local Forensic DB", Color(0xFF38BDF8), 1),
-                            Triple(if (isPersian) "درگاه NumVerify" else "NumVerify API", Color(0xFFF59E0B), 45)
-                        )
+                    val displayProviders = remember(providerConfigs) {
+                        providerConfigs.filter { 
+                            it.id in listOf("mempool_space_btc", "etherscan_eth", "trongrid_tron", "cryptoapis_multi") 
+                        }
                     }
                     
-                    gateways.forEach { (name, color, basePing) ->
-                        // Add jitter to ping to look "live"
-                        val dynamicPing = remember { mutableIntStateOf(basePing) }
-                        LaunchedEffect(Unit) {
-                            while(true) {
-                                kotlinx.coroutines.delay((1000..5000).random().toLong())
-                                dynamicPing.intValue = basePing + (-5..15).random()
-                                if (dynamicPing.intValue < 1) dynamicPing.intValue = 1
-                            }
+                    displayProviders.forEach { config ->
+                        val color = when (config.status) {
+                            com.aistudio.orbit.model.ProviderStatus.HEALTHY,
+                            com.aistudio.orbit.model.ProviderStatus.CONFIGURED -> Color(0xFF10B981)
+                            com.aistudio.orbit.model.ProviderStatus.TESTING -> Color(0xFF38BDF8)
+                            com.aistudio.orbit.model.ProviderStatus.DISABLED -> MaterialTheme.colorScheme.outline
+                            com.aistudio.orbit.model.ProviderStatus.UNVERIFIED -> Color(0xFFF59E0B)
+                            com.aistudio.orbit.model.ProviderStatus.FAILED -> MaterialTheme.colorScheme.error
+                            else -> Color(0xFFFFD54F)
                         }
 
                         Card(
@@ -281,7 +279,16 @@ fun DashboardView(
                                         .background(color)
                                 )
                                 Text(
-                                    text = name,
+                                    text = if (isPersian) {
+                                        when (config.id) {
+                                            "mempool_space_btc" -> "بیت‌کوین (Mempool)"
+                                            "etherscan_eth" -> "اتریوم (Etherscan)"
+                                            "trongrid_tron" -> "ترون (TronGrid)"
+                                            else -> "مولتی‌چین (CryptoAPIs)"
+                                        }
+                                    } else {
+                                        config.name.substringBefore(" (")
+                                    },
                                     style = MaterialTheme.typography.labelSmall,
                                     fontSize = 8.5.sp,
                                     maxLines = 2,
@@ -291,7 +298,13 @@ fun DashboardView(
                                     modifier = Modifier.heightIn(min = 20.dp)
                                 )
                                 Text(
-                                    text = "${dynamicPing.intValue}ms",
+                                    text = if (config.status == com.aistudio.orbit.model.ProviderStatus.DISABLED) {
+                                        if (isPersian) "غیرفعال" else "DISABLED"
+                                    } else if (config.status == com.aistudio.orbit.model.ProviderStatus.NOT_CONFIGURED) {
+                                        if (isPersian) "تنظیم‌نشده" else "NOT CONFIG"
+                                    } else {
+                                        "${config.lastResponseTimeMs.coerceAtLeast(12L)}ms"
+                                    },
                                     style = MaterialTheme.typography.labelSmall,
                                     fontSize = 8.sp,
                                     color = color.copy(alpha = 0.8f),
@@ -397,36 +410,48 @@ fun DashboardView(
                                 modifier = Modifier.fillMaxWidth(),
                                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f))
                             ) {
+                                val stageInfo = remember(activeCase) { getCaseCompletedStageInfo(activeCase!!, isPersian) }
+                                val activeNextAction = remember(activeCase) {
+                                    val currentStageEnum = when {
+                                        activeCase!!.transactions.isEmpty() && activeCase!!.balanceSat == 0L -> InvestigationStage.INITIAL_LEAD
+                                        activeCase!!.transactions.isEmpty() -> InvestigationStage.BLOCKCHAIN_DISCOVERY
+                                        activeCase!!.counterparties.isEmpty() -> InvestigationStage.TRANSACTIONS_LEDGER
+                                        else -> InvestigationStage.RELATED_ADDRESSES
+                                    }
+                                    calculateNextBestAction(currentStageEnum, activeCase!!)
+                                }
+
                                 Row(
                                     modifier = Modifier.padding(10.dp).fillMaxWidth(),
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
-                                    Column {
+                                    Column(modifier = Modifier.weight(1f)) {
                                         Text(
                                             text = if (isPersian) "مرحله فعلی نقشه راه:" else "Current Roadmap Stage:",
                                             style = MaterialTheme.typography.labelSmall,
                                             color = MaterialTheme.colorScheme.outline
                                         )
                                         Text(
-                                            text = if (isPersian) "مرحله ۳: بررسی بلاکچین" else "Stage 3: Blockchain Discovery",
+                                            text = stageInfo.second,
                                             style = MaterialTheme.typography.bodySmall,
                                             fontWeight = FontWeight.Bold,
                                             color = MaterialTheme.colorScheme.primary
                                         )
                                     }
 
-                                    Column(horizontalAlignment = Alignment.End) {
+                                    Column(horizontalAlignment = Alignment.End, modifier = Modifier.weight(1f)) {
                                         Text(
                                             text = if (isPersian) "پیشنهاد اقدام بعدی:" else "Recommended Next Best Action:",
                                             style = MaterialTheme.typography.labelSmall,
                                             color = MaterialTheme.colorScheme.outline
                                         )
                                         Text(
-                                            text = if (isPersian) "واکاوی تفصیلی تراکنش‌ها" else "Detailed Transactions Analysis",
+                                            text = if (isPersian) activeNextAction.proposalFa else activeNextAction.proposalEn,
                                             style = MaterialTheme.typography.bodySmall,
                                             fontWeight = FontWeight.Bold,
-                                            color = Color(0xFFFFD54F) // Gold Accent
+                                            color = Color(0xFFFFD54F), // Gold Accent
+                                            textAlign = TextAlign.End
                                         )
                                     }
                                 }
@@ -569,13 +594,14 @@ fun CaseCommandCenterItem(
 
                 Spacer(modifier = Modifier.height(2.dp))
 
-                // Interactive stage progress bar (e.g. 3/11 stages completed)
+                // Interactive stage progress bar
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
+                    val stageInfo = remember(c) { getCaseCompletedStageInfo(c, isPersian) }
                     LinearProgressIndicator(
-                        progress = { 0.27f }, // Stage 3 out of 11 stages completed is ~27%
+                        progress = { stageInfo.first },
                         color = MaterialTheme.colorScheme.primary,
                         trackColor = MaterialTheme.colorScheme.surfaceVariant,
                         modifier = Modifier
@@ -584,7 +610,7 @@ fun CaseCommandCenterItem(
                             .clip(CircleShape)
                     )
                     Text(
-                        text = if (isPersian) "مرحله ۳ از ۱۱ (بررسی بلاکچین)" else "Stage 3 of 11 (Discovery)",
+                        text = stageInfo.second,
                         style = MaterialTheme.typography.labelSmall,
                         fontSize = 8.sp,
                         color = MaterialTheme.colorScheme.outline
@@ -607,4 +633,35 @@ fun CaseCommandCenterItem(
             }
         }
     }
+}
+
+fun getCaseCompletedStageInfo(case: InvestigationCase, isPersian: Boolean): Pair<Float, String> {
+    val totalStages = 11
+    val currentStageId = when {
+        case.transactions.isEmpty() && case.balanceSat == 0L -> 2 // Initial Lead
+        case.transactions.isEmpty() -> 3 // Blockchain Discovery
+        case.counterparties.isEmpty() -> 4 // Transactions Ledger
+        case.matchedPatterns.isEmpty() -> 5 // Related Addresses
+        case.evidenceLog.isEmpty() -> 6 // Pattern Analysis
+        case.hypotheses.isEmpty() -> 7 // OSINT
+        else -> 10 // Conclusion / Report
+    }
+    
+    val progress = currentStageId.toFloat() / totalStages.toFloat()
+    val stageName = when (currentStageId) {
+        1 -> if (isPersian) "شروع تحقیق" else "Start Investigation"
+        2 -> if (isPersian) "سرنخ اولیه" else "Initial Lead"
+        3 -> if (isPersian) "بررسی بلاکچین" else "Blockchain Discovery"
+        4 -> if (isPersian) "بررسی تراکنش‌ها" else "Transactions Ledger"
+        5 -> if (isPersian) "بررسی ارتباط‌ها" else "Related Addresses"
+        6 -> if (isPersian) "بررسی الگوها" else "Pattern Analysis"
+        7 -> if (isPersian) "بررسی OSINT" else "OSINT Review"
+        8 -> if (isPersian) "بررسی ریسک" else "Risk Review"
+        9 -> if (isPersian) "مرور شواهد" else "Evidence Review"
+        10 -> if (isPersian) "نتیجه‌گیری" else "Conclusion"
+        else -> if (isPersian) "گزارش پرونده" else "Report"
+    }
+    
+    val displayText = if (isPersian) "مرحله $currentStageId از $totalStages ($stageName)" else "Stage $currentStageId of $totalStages ($stageName)"
+    return Pair(progress, displayText)
 }

@@ -202,6 +202,7 @@ class Stage2OsintIntelligenceFusionTests {
             override suspend fun insertDataset(dataset: DatasetMetadataEntity) {}
             override suspend fun insertDatasets(datasets: List<DatasetMetadataEntity>) {}
             override suspend fun updateDatasetStatus(id: String, status: String, progress: Float, lastUpdated: Long) {}
+            override suspend fun updateDatasetInstallation(id: String, status: String, progress: Float, recordCount: Int, lastUpdated: Long) {}
             override suspend fun setDatasetEnabled(id: String, enabled: Boolean) {}
             override suspend fun deleteDataset(id: String) {}
         }

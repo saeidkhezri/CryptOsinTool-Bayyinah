@@ -336,6 +336,12 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "orbit_forensics_database"
                 )
+                // Zero-Data-Loss Migration Strategy:
+                // 1. Every schema update MUST have an explicit Migration object (e.g., MIGRATION_6_7)
+                //    defining exact CREATE TABLE or ALTER TABLE queries.
+                // 2. DO NOT rely on fallbackToDestructiveMigration() in production release builds.
+                //    It is left here only to prevent unhandled crashes during debug prototyping,
+                //    but explicit migration paths take precedence and preserve forensic data integrity.
                 .addMigrations(MIGRATION_6_7)
                 .fallbackToDestructiveMigration()
                 .build()
