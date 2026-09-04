@@ -88,11 +88,11 @@ fun InvestigationWorkspaceView(
     var stageStatuses by remember(investigationCase, osintReport, deepCandidates) {
         val hasTransactions = investigationCase.transactions.isNotEmpty()
         val hasCounterparties = investigationCase.counterparties.isNotEmpty()
-        val hasPatterns = false // Future implementation
+        val hasPatterns = investigationCase.matchedPatterns.isNotEmpty()
         val hasOsint = osintReport != null
         val hasRisks = investigationCase.riskIndicators.isNotEmpty()
         val hasEvidence = investigationCase.evidenceLog.isNotEmpty()
-        val hasHypotheses = false // Future implementation
+        val hasHypotheses = investigationCase.hypotheses.isNotEmpty()
 
         mutableStateOf(mapOf(
             InvestigationStage.START_CASE to StageStatus.COMPLETED,

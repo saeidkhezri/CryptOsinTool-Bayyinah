@@ -4,11 +4,17 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 enum class CrimeCategory(val displayNameEn: String, val displayNameFa: String) {
+    FINANCIAL_CRIME("Financial Crime", "جرایم مالی"),
     MONEY_LAUNDERING("Money Laundering & Layering", "پولشویی و لایه‌بندی مالی"),
-    FRAUD_SCAM("Fraud & Ponzi Schemes", "کلاهبرداری و طرح‌های پانزی"),
-    RANSOMWARE("Ransomware & Extortion", "باج‌افزار و باج‌خواهی سایبری"),
-    THEFT_EXPLOIT("Theft & Protocol Exploits", "سرقت و نفوذ به پروتکل‌ها"),
-    SANCTIONS_EVASION("Sanctions Evasion Indicators", "شاخص‌های دور زدن تحریم‌ها"),
+    FRAUD("Fraud", "کلاهبرداری"),
+    SMUGGLING_FINANCING("Smuggling-related Financial Activity", "فعالیت‌های مالی مرتبط با قاچاق"),
+    CYBERCRIME_FINANCING("Cybercrime Financing", "تامین مالی جرایم سایبری"),
+    RANSOMWARE("Ransomware", "باج‌افزار"),
+    ESPIONAGE_FINANCING("Espionage-related Financial Activity", "فعالیت‌های مالی مرتبط با جاسوسی"),
+    SABOTAGE_FINANCING("Sabotage-related Financial Activity", "فعالیت‌های مالی مرتبط با خرابکاری"),
+    TERRORIST_FINANCING("Terrorist/Extremist Financing", "تامین مالی تروریسم/افراط‌گرایی"),
+    SANCTIONS_EVASION("Sanctions Evasion", "دور زدن تحریم‌ها"),
+    ASSET_CONCEALMENT("Asset Concealment", "پنهان‌سازی دارایی"),
     MIXER_OBFUSCATION("Mixer & Tumbler Obfuscation", "ناشناس‌سازی و استفاده از میکسر"),
     STRUCTURING_SMURFING("Structuring & Smurfing", "خردسازی تراکنش‌ها (Smurfing)"),
     HIGH_VELOCITY_TRANSIT("High Velocity Transit", "انتقال سریع با ماندگاری صفر"),
@@ -30,9 +36,14 @@ data class CrimePattern(
     val behavioralIndicatorsFa: List<String>,
     val detectionRules: String,
     val scoringModel: String,
+    val evidenceRequirements: List<String> = emptyList(),
+    val supportingSignals: List<String> = emptyList(),
+    val contradictorySignals: List<String> = emptyList(),
     val confidenceInterpretationEn: String,
     val confidenceInterpretationFa: String,
     val references: List<String>,
+    val limitationsEn: String = "Analytical indicator only. Does not prove criminal intent.",
+    val limitationsFa: String = "صرفاً شاخص تحلیلی است. نیت مجرمانه را ثابت نمی‌کند.",
     val version: String = "2.0.0"
 )
 
@@ -56,10 +67,14 @@ data class PatternMatchResult(
     val missingEvidenceFa: List<String> = missingEvidence,
     val relatedTxHashes: List<String> = emptyList(),
     val relatedAddresses: List<String> = emptyList(),
+    val evidenceIds: List<String> = emptyList(),
+    val thresholdsApplied: String = "",
     val analyticalRecommendationEn: String,
     val analyticalRecommendationFa: String,
     val forensicDisclaimerEn: String = "Pattern similarity is an analytical lead and does NOT establish criminal conduct.",
-    val forensicDisclaimerFa: String = "هشدار جرم‌یابی: تطابق الگویی صرفاً سرنخ تحلیلی بوده و به منزله اثبات ارتکاب جرم نیست."
+    val forensicDisclaimerFa: String = "هشدار جرم‌یابی: تطابق الگویی صرفاً سرنخ تحلیلی بوده و به منزله اثبات ارتکاب جرم نیست.",
+    val limitationsEn: String = "Analytical indicator only. Does not prove criminal intent.",
+    val limitationsFa: String = "صرفاً شاخص تحلیلی است. نیت مجرمانه را ثابت نمی‌کند."
 ) {
     fun localizedPatternName(isPersian: Boolean): String = if (isPersian) patternNameFa else patternNameEn
     fun localizedMatchedIndicators(isPersian: Boolean): List<String> = if (isPersian) matchedIndicatorsFa else matchedIndicatorsEn
@@ -67,6 +82,7 @@ data class PatternMatchResult(
     fun localizedMissingEvidence(isPersian: Boolean): List<String> = if (isPersian) missingEvidenceFa else missingEvidenceEn
     fun localizedRecommendation(isPersian: Boolean): String = if (isPersian) analyticalRecommendationFa else analyticalRecommendationEn
     fun localizedDisclaimer(isPersian: Boolean): String = if (isPersian) forensicDisclaimerFa else forensicDisclaimerEn
+    fun localizedLimitations(isPersian: Boolean): String = if (isPersian) limitationsFa else limitationsEn
 }
 
 @Serializable

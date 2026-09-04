@@ -192,7 +192,9 @@ data class InvestigationCase(
     val counterparties: List<CounterpartySummary> = emptyList(),
     val transactions: List<ForensicTransaction> = emptyList(),
     val evidenceLog: List<EvidenceItem> = emptyList(),
-    val riskIndicators: List<RiskIndicator> = emptyList()
+    val riskIndicators: List<RiskIndicator> = emptyList(),
+    val matchedPatterns: List<PatternMatchResult> = emptyList(),
+    val hypotheses: List<Hypothesis> = emptyList()
 ) {
     val balanceBtc: Double get() = balanceSat.toDouble() / 100_000_000.0
     val totalReceivedBtc: Double get() = totalReceivedSat.toDouble() / 100_000_000.0

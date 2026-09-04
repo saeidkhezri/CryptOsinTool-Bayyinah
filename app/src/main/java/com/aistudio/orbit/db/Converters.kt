@@ -32,4 +32,14 @@ class Converters {
     fun fromRiskIndicatorList(value: List<RiskIndicator>): String = json.encodeToString(value)
     @TypeConverter
     fun toRiskIndicatorList(value: String): List<RiskIndicator> = try { json.decodeFromString(value) } catch (e: Exception) { emptyList() }
+
+    @TypeConverter
+    fun fromPatternMatchResultList(value: List<PatternMatchResult>): String = json.encodeToString(value)
+    @TypeConverter
+    fun toPatternMatchResultList(value: String): List<PatternMatchResult> = try { json.decodeFromString(value) } catch (e: Exception) { emptyList() }
+
+    @TypeConverter
+    fun fromHypothesisList(value: List<Hypothesis>): String = json.encodeToString(value)
+    @TypeConverter
+    fun toHypothesisList(value: String): List<Hypothesis> = try { json.decodeFromString(value) } catch (e: Exception) { emptyList() }
 }

@@ -727,11 +727,8 @@ fun TypologyRulesTab(
     isPersian: Boolean,
     strings: ForensicStrings
 ) {
-    val evaluatedRules = remember(investigationCase) {
-        ForensicTypologyRulesEngine.evaluateCase(investigationCase)
-    }
-
-    val matchedCount = evaluatedRules.count { it.result.isMatched }
+    val matchedPatterns = investigationCase.matchedPatterns
+    val matchedCount = matchedPatterns.size
 
     LazyColumn(
         modifier = Modifier
@@ -754,7 +751,7 @@ fun TypologyRulesTab(
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Icon(Icons.Default.Security, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                             Text(
-                                text = if (isPersian) "موتور قوانین جرم‌یابی آن‌چین (YARA-Style)" else "On-Chain Typology Rules Engine",
+                                text = if (isPersian) "الگوهای جرایم مالی و ناهنجاری‌های رفتاری" else "Financial Crime Typologies & Behavioral Anomalies",
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold
                             )
@@ -765,7 +762,7 @@ fun TypologyRulesTab(
                             color = if (matchedCount > 0) Color(0xFFD32F2F) else Color(0xFF16A34A)
                         ) {
                             Text(
-                                text = if (matchedCount > 0) "${matchedCount} ${if (isPersian) "قاعده تطبیق یافت" else "Rules Matched"}" else (if (isPersian) "بدون مغایرت" else "Clean"),
+                                text = if (matchedCount > 0) "${matchedCount} ${if (isPersian) "الگو تطبیق یافت" else "Patterns Matched"}" else (if (isPersian) "بدون مغایرت" else "Clean"),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = Color.White,
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
@@ -776,8 +773,8 @@ fun TypologyRulesTab(
 
                     Text(
                         text = if (isPersian)
-                            "ارزیابی خودکار الگوهای پولشویی، پراکندگی سریع وجه، تراکنش‌های رند، و امضاهای میکسر بر اساس قوانین تخصصی جرم‌یابی مالی."
-                        else "Automated evaluation of money laundering patterns, rapid dispersion, structuring, and mixer signatures against standard financial crime typology rules.",
+                            "ارزیابی پیشرفته الگوهای جرم‌شناختی و رفتاری مبتنی بر ساختارهای پولشویی، خردسازی، و انتقال سریع."
+                        else "Advanced evaluation of criminological and behavioral patterns based on structuring, layering, and high-velocity transit typologies.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -785,134 +782,141 @@ fun TypologyRulesTab(
             }
         }
 
-        items(evaluatedRules) { item ->
-            var isExpanded by remember { mutableStateOf(false) }
-            val rule = item.rule
-            val result = item.result
+        if (matchedPatterns.isEmpty()) {
+            item {
+                Text(
+                    text = if (isPersian) "هیچ الگوی مجرمانه‌ای در تراکنش‌های موجود یافت نشد." else "No criminal typologies matched for available transactions.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(16.dp)
+                )
+            }
+        } else {
+            items(matchedPatterns) { pattern ->
+                var isExpanded by remember { mutableStateOf(false) }
 
-            Card(
-                shape = RoundedCornerShape(10.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = if (result.isMatched) MaterialTheme.colorScheme.surfaceContainerHighest else MaterialTheme.colorScheme.surfaceContainer
-                ),
-                border = if (result.isMatched) {
-                    androidx.compose.foundation.BorderStroke(
+                Card(
+                    shape = RoundedCornerShape(10.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHighest),
+                    border = androidx.compose.foundation.BorderStroke(
                         1.dp,
-                        when (rule.severity) {
-                            RiskSeverity.CRITICAL -> Color(0xFFD32F2F)
-                            RiskSeverity.HIGH -> Color(0xFFF57C00)
+                        when (pattern.confidence) {
+                            ConfidenceLevel.DEFINITIVE_FACT, ConfidenceLevel.HIGH_CONFIDENCE -> Color(0xFFD32F2F)
+                            ConfidenceLevel.MEDIUM_CONFIDENCE -> Color(0xFFF57C00)
                             else -> MaterialTheme.colorScheme.primary
-                        }
-                    )
-                } else null,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = if (isPersian) rule.nameFa else rule.name,
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = "${rule.category} • ${rule.id}",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.outline
-                            )
-                        }
-
-                        Surface(
-                            shape = RoundedCornerShape(4.dp),
-                            color = if (result.isMatched) {
-                                when (rule.severity) {
-                                    RiskSeverity.CRITICAL, RiskSeverity.HIGH -> Color(0xFFD32F2F)
-                                    RiskSeverity.MEDIUM -> Color(0xFFF57C00)
-                                    else -> MaterialTheme.colorScheme.primary
-                                }
-                            } else Color(0xFF4B5563)
+                        }.copy(alpha = 0.5f)
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { isExpanded = !isExpanded }
+                ) {
+                    Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(
-                                text = if (result.isMatched) (if (isPersian) "تطبیق یافت" else "MATCHED") else (if (isPersian) "عدم تطبیق" else "PASS"),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = Color.White,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    }
-
-                    Text(
-                        text = if (isPersian) rule.descriptionFa else rule.description,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-
-                    if (result.isMatched) {
-                        Surface(
-                            shape = RoundedCornerShape(6.dp),
-                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Column(modifier = Modifier.padding(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                Text(
-                                    text = "${if (isPersian) "شواهد تطبیق: " else "Evidence: "}${if (isPersian) result.evidenceDetailsFa else result.evidenceDetailsEn}",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.primary,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                if (result.matchedTxIds.isNotEmpty()) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                     Text(
-                                        text = "${if (isPersian) "تراکنش‌های مرتبط: " else "Matched Txs: "}${result.matchedTxIds.take(3).joinToString { it.take(8) + "..." }}",
-                                        style = MaterialTheme.typography.labelSmall.copy(fontFamily = FontFamily.Monospace, textDirection = TextDirection.Ltr),
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        text = "[${pattern.patternCode}]",
+                                        style = MaterialTheme.typography.labelMedium.copy(fontFamily = FontFamily.Monospace),
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                    Text(
+                                        text = pattern.localizedPatternName(isPersian),
+                                        style = MaterialTheme.typography.titleSmall,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = if (isPersian) pattern.category.displayNameFa else pattern.category.displayNameEn,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                CertaintyBadge(level = if (pattern.confidence == ConfidenceLevel.DEFINITIVE_FACT || pattern.confidence == ConfidenceLevel.HIGH_CONFIDENCE) ForensicCertaintyLevel.OBSERVED_FACT else ForensicCertaintyLevel.INFERENCE, isPersian = isPersian)
+                                Icon(
+                                    imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+
+                        if (isExpanded) {
+                            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), color = MaterialTheme.colorScheme.surfaceVariant)
+
+                            // Matched Indicators
+                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Text(
+                                    text = if (isPersian) "نشانگرهای تطبیق‌یافته:" else "Matched Indicators:",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                pattern.localizedMatchedIndicators(isPersian).forEach { indicator ->
+                                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                        Icon(Icons.Default.CheckCircle, contentDescription = null, tint = Color(0xFF16A34A), modifier = Modifier.size(14.dp))
+                                        Text(text = indicator, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                }
+                            }
+
+                            // Conflicting / Missing
+                            val conflicts = pattern.localizedConflictingIndicators(isPersian)
+                            val missing = pattern.localizedMissingEvidence(isPersian)
+
+                            if (conflicts.isNotEmpty() || missing.isNotEmpty()) {
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    Text(
+                                        text = if (isPersian) "محدودیت‌های تحلیل / شواهد متناقض و مفقود:" else "Analytical Limitations / Conflicting & Missing Evidence:",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    conflicts.forEach { conflict ->
+                                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                            Icon(Icons.Default.Warning, contentDescription = null, tint = Color(0xFFF57C00), modifier = Modifier.size(14.dp))
+                                            Text(text = conflict, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        }
+                                    }
+                                    missing.forEach { m ->
+                                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                            Icon(Icons.Default.HelpOutline, contentDescription = null, tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.size(14.dp))
+                                            Text(text = m, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Recommendation
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Row(modifier = Modifier.padding(10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.Lightbulb, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
+                                    Text(
+                                        text = pattern.localizedRecommendation(isPersian),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer
                                     )
                                 }
                             }
-                        }
-                    }
 
-                    // YARA Code syntax preview toggle
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { isExpanded = !isExpanded },
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = if (isExpanded) (if (isPersian) "بستن متن قانون YARA" else "Hide YARA Rule") else (if (isPersian) "مشاهده متن قانون YARA" else "View YARA Rule Definition"),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.secondary,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Icon(
-                            if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.secondary,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-
-                    AnimatedVisibility(visible = isExpanded) {
-                        Surface(
-                            shape = RoundedCornerShape(6.dp),
-                            color = Color(0xFF0F172A),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
+                            // Limitations / Disclaimer
+                            Spacer(modifier = Modifier.height(2.dp))
                             Text(
-                                text = rule.rawYaraRuleString,
-                                style = MaterialTheme.typography.bodySmall.copy(
-                                    fontFamily = FontFamily.Monospace,
-                                    fontSize = 11.sp,
-                                    textDirection = TextDirection.Ltr
-                                ),
-                                color = Color(0xFF38BDF8),
-                                modifier = Modifier.padding(10.dp)
+                                text = "${pattern.localizedLimitations(isPersian)} ${pattern.localizedDisclaimer(isPersian)}",
+                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                                color = MaterialTheme.colorScheme.outline
                             )
                         }
                     }

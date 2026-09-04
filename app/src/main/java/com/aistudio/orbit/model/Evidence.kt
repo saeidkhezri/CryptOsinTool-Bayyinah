@@ -102,6 +102,21 @@ data class ProvenanceRecord(
     val isCache: Boolean = false
 )
 
+@Serializable
+data class SourceIndependenceMetrics(
+    val sourceFamily: String,
+    val independentSourceCount: Int = 1,
+    val isMirror: Boolean = false,
+    val originalSource: String? = null
+)
+
+@Serializable
+enum class EvidencePolarity {
+    POSITIVE_FINDING,
+    NEGATIVE_FINDING,
+    INCONCLUSIVE
+}
+
 /**
  * Enhanced Forensic Evidence Data Class
  * Every finding tracks provenance, category, confidence, bilingual titles/descriptions, and direct fact status.
@@ -133,7 +148,9 @@ data class EvidenceItem(
     val verificationStatus: VerificationStatus = if (isDirectFact) VerificationStatus.VERIFIED_OFFICIAL else VerificationStatus.HEURISTIC_CLUSTER,
     val contentHash: String = "",
     val previousHash: String = "",
-    val version: Int = 1
+    val version: Int = 1,
+    val polarity: EvidencePolarity = EvidencePolarity.POSITIVE_FINDING,
+    val sourceIndependence: SourceIndependenceMetrics = SourceIndependenceMetrics(sourceFamily = providerName)
 ) {
     fun localizedTitle(isPersian: Boolean): String = if (isPersian) titleFa else titleEn
     fun localizedDescription(isPersian: Boolean): String = if (isPersian) descriptionFa else descriptionEn

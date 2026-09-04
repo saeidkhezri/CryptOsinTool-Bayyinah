@@ -54,6 +54,14 @@ object InvestigationStateMachine {
         hasRisks: Boolean,
         hasHypotheses: Boolean
     ): InvestigationStateInfo {
+        val nextBestActionDetailed = NextBestActionEngine.determineNextBestAction(
+            case = case,
+            hasOsint = hasOsint,
+            hasPatterns = hasPatterns,
+            hasRisks = hasRisks,
+            hasHypotheses = hasHypotheses
+        )
+
         if (case == null) {
             return InvestigationStateInfo(
                 state = InvestigationState.NOT_STARTED,
@@ -63,17 +71,8 @@ object InvestigationStateMachine {
                 missingInputs = listOf("Target Address"),
                 evidenceCount = 0,
                 confidence = 0,
-                recommendedNextAction = "Provide a target address to begin.",
-                nextBestActionDetailed = NextBestAction(
-                    action = "Provide a target address to begin.",
-                    reason = "Derived from current state progression",
-                    supportingEvidenceCount = 0,
-                    expectedInvestigativeValue = "High",
-                    requiredInput = "Target Address",
-                    targetStage = "Next available phase",
-                    confidence = 0,
-                    costImplication = "Standard API limits"
-                )
+                recommendedNextAction = nextBestActionDetailed.action,
+                nextBestActionDetailed = nextBestActionDetailed
             )
         }
         
@@ -89,18 +88,9 @@ object InvestigationStateMachine {
                     requiredInputs = emptyList(),
                     missingInputs = listOf("Transactions"),
                     evidenceCount = evidenceCount,
-                confidence = 10,
-                recommendedNextAction = "Verify the address or check off-chain sources.",
-                nextBestActionDetailed = NextBestAction(
-                    action = "Verify the address or check off-chain sources.",
-                    reason = "Derived from current state progression",
-                    supportingEvidenceCount = evidenceCount,
-                    expectedInvestigativeValue = "High",
-                    requiredInput = "Target Address",
-                    targetStage = "Next available phase",
                     confidence = 10,
-                    costImplication = "Standard API limits"
-                )
+                    recommendedNextAction = nextBestActionDetailed.action,
+                    nextBestActionDetailed = nextBestActionDetailed
                 )
             }
             return InvestigationStateInfo(
@@ -111,17 +101,8 @@ object InvestigationStateMachine {
                 missingInputs = listOf("Transactions"),
                 evidenceCount = evidenceCount,
                 confidence = 30,
-                recommendedNextAction = "Retrieve historical transactions.",
-                nextBestActionDetailed = NextBestAction(
-                    action = "Retrieve historical transactions.",
-                    reason = "Derived from current state progression",
-                    supportingEvidenceCount = evidenceCount,
-                    expectedInvestigativeValue = "High",
-                    requiredInput = "Target Address",
-                    targetStage = "Next available phase",
-                    confidence = 30,
-                    costImplication = "Standard API limits"
-                )
+                recommendedNextAction = nextBestActionDetailed.action,
+                nextBestActionDetailed = nextBestActionDetailed
             )
         }
         
@@ -134,17 +115,8 @@ object InvestigationStateMachine {
                 missingInputs = listOf("Counterparties"),
                 evidenceCount = evidenceCount,
                 confidence = 40,
-                recommendedNextAction = "Extract and cluster counterparties.",
-                nextBestActionDetailed = NextBestAction(
-                    action = "Extract and cluster counterparties.",
-                    reason = "Derived from current state progression",
-                    supportingEvidenceCount = evidenceCount,
-                    expectedInvestigativeValue = "High",
-                    requiredInput = "Target Address",
-                    targetStage = "Next available phase",
-                    confidence = 40,
-                    costImplication = "Standard API limits"
-                )
+                recommendedNextAction = nextBestActionDetailed.action,
+                nextBestActionDetailed = nextBestActionDetailed
             )
         }
         
@@ -157,17 +129,8 @@ object InvestigationStateMachine {
                 missingInputs = listOf("Pattern Results"),
                 evidenceCount = evidenceCount,
                 confidence = 50,
-                recommendedNextAction = "Run crime typology matching.",
-                nextBestActionDetailed = NextBestAction(
-                    action = "Run crime typology matching.",
-                    reason = "Derived from current state progression",
-                    supportingEvidenceCount = evidenceCount,
-                    expectedInvestigativeValue = "High",
-                    requiredInput = "Target Address",
-                    targetStage = "Next available phase",
-                    confidence = 50,
-                    costImplication = "Standard API limits"
-                )
+                recommendedNextAction = nextBestActionDetailed.action,
+                nextBestActionDetailed = nextBestActionDetailed
             )
         }
         
@@ -180,17 +143,8 @@ object InvestigationStateMachine {
                 missingInputs = listOf("OSINT Data"),
                 evidenceCount = evidenceCount,
                 confidence = 60,
-                recommendedNextAction = "Correlate with off-chain OSINT.",
-                nextBestActionDetailed = NextBestAction(
-                    action = "Correlate with off-chain OSINT.",
-                    reason = "Derived from current state progression",
-                    supportingEvidenceCount = evidenceCount,
-                    expectedInvestigativeValue = "High",
-                    requiredInput = "Target Address",
-                    targetStage = "Next available phase",
-                    confidence = 60,
-                    costImplication = "Standard API limits"
-                )
+                recommendedNextAction = nextBestActionDetailed.action,
+                nextBestActionDetailed = nextBestActionDetailed
             )
         }
         
@@ -203,17 +157,8 @@ object InvestigationStateMachine {
                 missingInputs = listOf("Risk Scores"),
                 evidenceCount = evidenceCount,
                 confidence = 70,
-                recommendedNextAction = "Review and calculate risk scores.",
-                nextBestActionDetailed = NextBestAction(
-                    action = "Review and calculate risk scores.",
-                    reason = "Derived from current state progression",
-                    supportingEvidenceCount = evidenceCount,
-                    expectedInvestigativeValue = "High",
-                    requiredInput = "Target Address",
-                    targetStage = "Next available phase",
-                    confidence = 70,
-                    costImplication = "Standard API limits"
-                )
+                recommendedNextAction = nextBestActionDetailed.action,
+                nextBestActionDetailed = nextBestActionDetailed
             )
         }
         
@@ -226,17 +171,8 @@ object InvestigationStateMachine {
                 missingInputs = listOf("Evidence Items"),
                 evidenceCount = evidenceCount,
                 confidence = 80,
-                recommendedNextAction = "Extract and seal digital evidence.",
-                nextBestActionDetailed = NextBestAction(
-                    action = "Extract and seal digital evidence.",
-                    reason = "Derived from current state progression",
-                    supportingEvidenceCount = evidenceCount,
-                    expectedInvestigativeValue = "High",
-                    requiredInput = "Target Address",
-                    targetStage = "Next available phase",
-                    confidence = 80,
-                    costImplication = "Standard API limits"
-                )
+                recommendedNextAction = nextBestActionDetailed.action,
+                nextBestActionDetailed = nextBestActionDetailed
             )
         }
         
@@ -249,17 +185,8 @@ object InvestigationStateMachine {
                 missingInputs = listOf("Analyst Hypothesis"),
                 evidenceCount = evidenceCount,
                 confidence = 90,
-                recommendedNextAction = "Formulate a forensic hypothesis.",
-                nextBestActionDetailed = NextBestAction(
-                    action = "Formulate a forensic hypothesis.",
-                    reason = "Derived from current state progression",
-                    supportingEvidenceCount = evidenceCount,
-                    expectedInvestigativeValue = "High",
-                    requiredInput = "Target Address",
-                    targetStage = "Next available phase",
-                    confidence = 90,
-                    costImplication = "Standard API limits"
-                )
+                recommendedNextAction = nextBestActionDetailed.action,
+                nextBestActionDetailed = nextBestActionDetailed
             )
         }
         
@@ -270,18 +197,9 @@ object InvestigationStateMachine {
             requiredInputs = emptyList(),
             missingInputs = emptyList(),
             evidenceCount = evidenceCount,
-                confidence = 100,
-                recommendedNextAction = "Export final case report.",
-                nextBestActionDetailed = NextBestAction(
-                    action = "Export final case report.",
-                    reason = "Derived from current state progression",
-                    supportingEvidenceCount = evidenceCount,
-                    expectedInvestigativeValue = "High",
-                    requiredInput = "Target Address",
-                    targetStage = "Next available phase",
-                    confidence = 100,
-                    costImplication = "Standard API limits"
-                )
+            confidence = 100,
+            recommendedNextAction = nextBestActionDetailed.action,
+            nextBestActionDetailed = nextBestActionDetailed
         )
     }
 }

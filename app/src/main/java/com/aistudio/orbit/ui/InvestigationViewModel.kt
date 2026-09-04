@@ -116,7 +116,21 @@ class InvestigationViewModel(application: Application) : AndroidViewModel(applic
                             "Conflicts: ${it.conflicts.map { c -> "${c.conflictDomain}: ${c.candidateA} vs ${c.candidateB}" }}\n"
                         }
                         val caseContext = contextBuilder.buildCaseSummaryContext(caseObj, osintContextStr)
-                        val prompt = "Context:\n$caseContext\n\nTask: Write a concise, professional executive summary of this investigation case. The summary must include an overview, key findings, and implications. Use citations [EVID-xxx] whenever referencing evidence. Keep the tone objective and forensic."
+                        val prompt = """
+                            You are an AI Investigation Assistant within the Bayyinah platform.
+                            Your primary role is to assist the investigator by summarizing, comparing, explaining, identifying inconsistencies, suggesting actions, proposing hypotheses, explaining graphs, summarizing OSINT, or drafting reports.
+
+                            CRITICAL RULES:
+                            1. Every important statement or conclusion you make MUST reference evidence IDs (e.g. [EVID-xxxx]) from the provided context.
+                            2. DO NOT output meaningless or fabricated confidence numbers. If you provide a confidence assessment, it must be explainable based on: Evidence Strength, Source Quality, Source Independence, Temporal Validity, Contradictory Evidence, and Analytical Method.
+                            3. If the evidence is insufficient to answer the user's question, you MUST explicitly state "INSUFFICIENT EVIDENCE" and explain what is missing.
+                            4. You may propose hypotheses but you may NOT finalize them as facts. State clearly that it is a hypothesis.
+
+                            Context:
+                            $caseContext
+
+                            Task: Write a concise, professional executive summary of this investigation case. The summary must include an overview, key findings, and implications. Use citations [EVID-xxx] whenever referencing evidence. Keep the tone objective and forensic.
+                        """.trimIndent()
                         val result = provider.executePrompt(prompt, apiKey, enabledProvider.model, enabledProvider.endpoint)
                         if (result.output != null) {
                             _aiDraftedSummary.value = result.output
@@ -587,6 +601,10 @@ class InvestigationViewModel(application: Application) : AndroidViewModel(applic
                 _progressState.value = ForensicProgressState(isRunning = false)
             }
         }
+    }
+
+    fun updateActiveCase(updatedCase: InvestigationCase) {
+        _activeCase.value = updatedCase
     }
 
     fun loadCase(investigationCase: InvestigationCase) {

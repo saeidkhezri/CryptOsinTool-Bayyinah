@@ -318,7 +318,23 @@ fun AiCopilotView(
                                             }
                                             
                                             val caseContext = contextBuilder.buildCaseSummaryContext(investigationCase, osintContextStr)
-                                            val prompt = "Context:\n$caseContext\n\nInvestigator Question: $userText\n\nAnswer:"
+                                            val prompt = """
+                                                You are an AI Investigation Assistant within the Bayyinah platform.
+                                                Your primary role is to assist the investigator by summarizing, comparing, explaining, identifying inconsistencies, suggesting actions, proposing hypotheses, explaining graphs, summarizing OSINT, or drafting reports.
+
+                                                CRITICAL RULES:
+                                                1. Every important statement or conclusion you make MUST reference evidence IDs (e.g. [EVID-xxxx]) from the provided context.
+                                                2. DO NOT output meaningless or fabricated confidence numbers. If you provide a confidence assessment, it must be explainable based on: Evidence Strength, Source Quality, Source Independence, Temporal Validity, Contradictory Evidence, and Analytical Method.
+                                                3. If the evidence is insufficient to answer the user's question, you MUST explicitly state "INSUFFICIENT EVIDENCE" and explain what is missing.
+                                                4. You may propose hypotheses but you may NOT finalize them as facts. State clearly that it is a hypothesis.
+
+                                                Context:
+                                                $caseContext
+
+                                                Investigator Question: $userText
+
+                                                Answer:
+                                            """.trimIndent()
                                             
                                             val result = provider.executePrompt(
                                                 prompt = prompt,
