@@ -42,7 +42,7 @@ class ApiManagerService(
      */
     fun loadAllApiConfigs() {
         val initialList = getMasterApiRegistry().map { defaultCfg ->
-            val storedKey = secureStorage.getApiKeyPrimary(defaultCfg.id)
+            val storedKey = secureStorage.getRawApiKeyPrimary(defaultCfg.id)
             val storedSecondary = secureStorage.getApiKeySecondary(defaultCfg.id)
             val isEnabled = secureStorage.isProviderEnabled(defaultCfg.id, defaultCfg.isEnabled)
 
@@ -389,24 +389,72 @@ class ApiManagerService(
     /**
      * Parses an imported .txt or .ini configuration file.
      */
+    /**
+     * Parses an imported .txt or .ini configuration file or raw unstructured text.
+     */
     fun parseImportFile(fileContent: String): List<Pair<String, String>> {
         val pairs = mutableListOf<Pair<String, String>>()
         val lines = fileContent.lines()
 
+        // 1. Check for standard KEY=VALUE or KEY:VALUE pairs
         for (line in lines) {
             val trimmed = line.trim()
             if (trimmed.isEmpty() || trimmed.startsWith("#") || trimmed.startsWith(";")) continue
             if (trimmed.startsWith("[") && trimmed.endsWith("]")) continue
 
-            val eqIdx = trimmed.indexOf('=')
-            if (eqIdx > 0) {
-                val rawKeyName = trimmed.substring(0, eqIdx).trim()
-                val rawValue = trimmed.substring(eqIdx + 1).trim()
+            val separatorIdx = trimmed.indexOfAny(charArrayOf('=', ':'))
+            if (separatorIdx > 0) {
+                val rawKeyName = trimmed.substring(0, separatorIdx).trim()
+                val rawValue = trimmed.substring(separatorIdx + 1).trim()
                 if (rawValue.isNotBlank() && !rawValue.startsWith("YOUR_") && !rawValue.endsWith("_HERE")) {
                     pairs.add(Pair(rawKeyName, rawValue))
                 }
             }
         }
+
+        // 2. Scan the text for potential key-like tokens
+        val tokenRegex = Regex("[A-Za-z0-9_-]{12,120}")
+        val tokens = tokenRegex.findAll(fileContent).map { it.value.trim() }.distinct().toList()
+
+        for (token in tokens) {
+            if (token.startsWith("YOUR_") || token.endsWith("_HERE") || token.contains("placeholder") || token.contains("api_key")) continue
+
+            val isAlreadyCaptured = pairs.any { it.second == token }
+            if (isAlreadyCaptured) continue
+
+            if (token.startsWith("AIzaSy")) {
+                pairs.add(Pair("GOOGLE_AI_API_KEY", token))
+                continue
+            }
+            if (token.startsWith("sk-")) {
+                pairs.add(Pair("OPENAI_API_KEY", token))
+                continue
+            }
+
+            val containingLine = lines.find { it.contains(token) } ?: ""
+            val lowerLine = containingLine.lowercase(Locale.ROOT)
+
+            val keyName = when {
+                lowerLine.contains("gemini") || lowerLine.contains("google") -> "GOOGLE_AI_API_KEY"
+                lowerLine.contains("openai") || lowerLine.contains("gpt") -> "OPENAI_API_KEY"
+                lowerLine.contains("shodan") -> "SHODAN_API_KEY"
+                lowerLine.contains("abuse") -> "ABUSEIPDB_API_KEY"
+                lowerLine.contains("etherscan") -> "ETHERSCAN_API_KEY"
+                lowerLine.contains("trongrid") || lowerLine.contains("tron") -> "TRONGRID_API_KEY"
+                lowerLine.contains("misp") -> "MISP_API_KEY"
+                lowerLine.contains("hibp") || lowerLine.contains("pwned") -> "HIBP_API_KEY"
+                lowerLine.contains("cryptoapis") -> "CRYPTOAPIS_API_KEY"
+                lowerLine.contains("numverify") -> "NUMVERIFY_API_KEY"
+                lowerLine.contains("blockchair") -> "BLOCKCHAIR_API_KEY"
+                lowerLine.contains("virustotal") || lowerLine.contains("vt_") -> "VIRUSTOTAL_API_KEY"
+                else -> null
+            }
+
+            if (keyName != null) {
+                pairs.add(Pair(keyName, token))
+            }
+        }
+
         return pairs
     }
 
@@ -417,8 +465,9 @@ class ApiManagerService(
         val result = mutableListOf<ValidatedApiKeyItem>()
         val configs = _apiConfigs.value
 
+        val groupedKeys = mutableMapOf<String, MutableSet<String>>()
+
         pairs.forEach { (keyName, keyValue) ->
-            // Match with config
             val matchedConfig = configs.find { cfg ->
                 val expectedVar = "${cfg.id.uppercase(Locale.ROOT)}_KEY"
                 keyName.equals(expectedVar, ignoreCase = true) ||
@@ -430,29 +479,54 @@ class ApiManagerService(
                         (cfg.id == "misp_threat_node" && keyName.contains("MISP", ignoreCase = true)) ||
                         (cfg.id == "etherscan_eth" && keyName.contains("ETHERSCAN", ignoreCase = true)) ||
                         (cfg.id == "hibp_identity" && keyName.contains("HIBP", ignoreCase = true)) ||
-                        (cfg.id == "blockchair_multi" && keyName.contains("BLOCKCHAIR", ignoreCase = true))
+                        (cfg.id == "blockchair_multi" && keyName.contains("BLOCKCHAIR", ignoreCase = true)) ||
+                        (cfg.id == "trongrid_tron" && keyName.contains("TRON", ignoreCase = true)) ||
+                        (cfg.id == "virustotal_threat" && keyName.contains("VIRUS", ignoreCase = true)) ||
+                        (cfg.id == "cryptoapis_multi" && keyName.contains("CRYPTOAPIS", ignoreCase = true)) ||
+                        (cfg.id == "numverify_phone" && keyName.contains("NUMVERIFY", ignoreCase = true))
             }
 
             if (matchedConfig != null) {
-                val isValidFormat = keyValue.length >= 6
-                val connState = if (isValidFormat) ApiConnectionState.CONNECTED else ApiConnectionState.INVALID_KEY
-                val quotaInfo = if (isValidFormat) computeDynamicQuota(matchedConfig.id, keyValue) else ApiQuotaInfo(0, 0, 1000)
-                
-                result.add(
-                    ValidatedApiKeyItem(
-                        id = matchedConfig.id,
-                        serviceName = matchedConfig.name,
-                        category = matchedConfig.category,
-                        maskedKey = maskKey(keyValue),
-                        rawKey = keyValue,
-                        connectionState = connState,
-                        quotaPercent = quotaInfo.remainingPercent,
-                        quotaText = if (quotaInfo.remainingCount != null && quotaInfo.totalCount != null) "${quotaInfo.remainingCount} / ${quotaInfo.totalCount}" else "${quotaInfo.remainingPercent}%",
-                        errorMessage = if (!isValidFormat) "طول کلید وارد شده نامعتبر است (حداقل ۶ کاراکتر)" else null
-                    )
-                )
+                groupedKeys.getOrPut(matchedConfig.id) { mutableSetOf() }.add(keyValue)
             }
         }
+
+        groupedKeys.forEach { (configId, keys) ->
+            val matchedConfig = configs.find { it.id == configId } ?: return@forEach
+            val activeKeys = keys.take(5).toList()
+            val joinedKeys = activeKeys.joinToString("|")
+
+            var allValid = true
+            val errorMessages = mutableListOf<String>()
+
+            activeKeys.forEach { key ->
+                if (key.length < 6) {
+                    allValid = false
+                    errorMessages.add("کلید نامعتبر (خیلی کوتاه)")
+                }
+            }
+
+            val connState = if (allValid) ApiConnectionState.CONNECTED else ApiConnectionState.INVALID_KEY
+            val quotaInfo = if (allValid) computeDynamicQuota(matchedConfig.id, activeKeys.first()) else ApiQuotaInfo(0, 0, 1000)
+
+            val maskedString = activeKeys.joinToString(", ") { maskKey(it) }
+            val countTextFa = if (activeKeys.size > 1) "${activeKeys.size} کلید شناسایی شد" else "۱ کلید شناسایی شد"
+
+            result.add(
+                ValidatedApiKeyItem(
+                    id = matchedConfig.id,
+                    serviceName = matchedConfig.name,
+                    category = matchedConfig.category,
+                    maskedKey = maskedString,
+                    rawKey = joinedKeys,
+                    connectionState = connState,
+                    quotaPercent = quotaInfo.remainingPercent,
+                    quotaText = if (activeKeys.size > 1) "$countTextFa | ${quotaInfo.remainingPercent}%" else if (quotaInfo.remainingCount != null && quotaInfo.totalCount != null) "${quotaInfo.remainingCount} / ${quotaInfo.totalCount}" else "${quotaInfo.remainingPercent}%",
+                    errorMessage = if (errorMessages.isNotEmpty()) errorMessages.distinct().joinToString(", ") else null
+                )
+            )
+        }
+
         result
     }
 

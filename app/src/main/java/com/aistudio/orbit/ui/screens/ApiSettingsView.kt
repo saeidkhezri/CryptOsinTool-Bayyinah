@@ -307,59 +307,167 @@ fun ApiSettingsView(
         AlertDialog(
             onDismissRequest = { showImportDialog = false },
             icon = { Icon(Icons.Default.FileUpload, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
-            title = { Text(if (isPersian) "بارگزاری فایل یا متن کلیدهای API" else "Import API Keys File / Text", fontWeight = FontWeight.Bold) },
+            title = {
+                Text(
+                    text = if (validationItemsToConfirm == null) {
+                        if (isPersian) "بارگزاری فایل یا متن کلیدهای API" else "Import API Keys File / Text"
+                    } else {
+                        if (isPersian) "تایید و ذخیره کلیدهای شناسایی شده" else "Confirm Detected API Keys"
+                    },
+                    fontWeight = FontWeight.Bold
+                )
+            },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text(
-                        text = if (isPersian) "محتوای فایل پیکربندی (.txt یا .ini) شامل کلیدهای API را وارد کنید. سامانه قبل از ذخیره، اعتبارسنجی زنده انجام خواهد داد."
-                        else "Paste the content of your .txt or .ini API configuration file. The platform will validate keys before committing to the secure vault.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    if (validationItemsToConfirm == null) {
+                        Text(
+                            text = if (isPersian) "محتوای حاوی کلیدهای خود را به همراه هرگونه توضیحات اضافه وارد نمایید. سامانه کلیدها را اسکن و استخراج کرده و تا ۵ کلید معتبر به ازای هر سرویس را برای توزیع بار و افزایش محدودیت نرخ ذخیره می‌نماید."
+                            else "Paste text containing your API keys with any descriptive comments. The system will auto-extract keys, supporting up to 5 keys per provider for rate-limit balancing.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
 
-                    OutlinedTextField(
-                        value = importTextContent,
-                        onValueChange = { importTextContent = it },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(150.dp),
-                        placeholder = {
+                        OutlinedTextField(
+                            value = importTextContent,
+                            onValueChange = { importTextContent = it },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(150.dp),
+                            placeholder = {
+                                Text(
+                                    "GOOGLE_AI_API_KEY=AIzaSy...\nOPENAI_API_KEY=sk-proj...\nSHODAN_API_KEY=...\nABUSEIPDB_API_KEY=...",
+                                    fontSize = 11.sp,
+                                    fontFamily = FontFamily.Monospace
+                                )
+                            },
+                            textStyle = LocalTextStyle.current.copy(fontFamily = FontFamily.Monospace, fontSize = 11.sp)
+                        )
+                    } else {
+                        val items = validationItemsToConfirm!!
+                        if (items.isEmpty()) {
                             Text(
-                                "GOOGLE_AI_API_KEY=AIzaSy...\nOPENAI_API_KEY=sk-proj...\nSHODAN_API_KEY=...\nABUSEIPDB_API_KEY=...",
-                                fontSize = 11.sp,
-                                fontFamily = FontFamily.Monospace
+                                text = if (isPersian) "هیچ کلید معتبری در متن وارد شده شناسایی نشد." else "No valid API keys could be identified in the text.",
+                                color = MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.bodyMedium
                             )
-                        },
-                        textStyle = LocalTextStyle.current.copy(fontFamily = FontFamily.Monospace, fontSize = 11.sp)
-                    )
+                        } else {
+                            Text(
+                                text = if (isPersian) "کلیدهای زیر با موفقیت شناسایی و اعتبارسنجی شدند:" else "The following keys were successfully identified and validated:",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+
+                            LazyColumn(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .heightIn(max = 250.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                items(items) { item ->
+                                    Card(
+                                        colors = CardDefaults.cardColors(
+                                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+                                        ),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Column(modifier = Modifier.padding(10.dp)) {
+                                            Row(
+                                                horizontalArrangement = Arrangement.SpaceBetween,
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                modifier = Modifier.fillMaxWidth()
+                                            ) {
+                                                Text(
+                                                    text = item.serviceName,
+                                                    fontWeight = FontWeight.Bold,
+                                                    style = MaterialTheme.typography.bodyMedium
+                                                )
+                                                Badge(
+                                                    containerColor = if (item.connectionState == ApiConnectionState.CONNECTED) Color(0xFF4CAF50).copy(alpha = 0.15f) else MaterialTheme.colorScheme.errorContainer,
+                                                    contentColor = if (item.connectionState == ApiConnectionState.CONNECTED) Color(0xFF4CAF50) else MaterialTheme.colorScheme.error
+                                                ) {
+                                                    Text(
+                                                        text = if (item.connectionState == ApiConnectionState.CONNECTED) {
+                                                            if (isPersian) "معتبر" else "Valid"
+                                                        } else {
+                                                            if (isPersian) "نامعتبر" else "Invalid"
+                                                        },
+                                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                                        fontSize = 10.sp
+                                                    )
+                                                }
+                                            }
+                                            Spacer(modifier = Modifier.height(4.dp))
+                                            Text(
+                                                text = item.maskedKey,
+                                                fontFamily = FontFamily.Monospace,
+                                                fontSize = 10.sp,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                            if (item.quotaText.isNotEmpty()) {
+                                                Spacer(modifier = Modifier.height(4.dp))
+                                                Text(
+                                                    text = "${if (isPersian) "وضعیت" else "Status"}: ${item.quotaText}",
+                                                    fontSize = 10.sp,
+                                                    color = MaterialTheme.colorScheme.primary
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             },
             confirmButton = {
-                Button(
-                    onClick = {
-                        coroutineScope.launch {
-                            isValidatingImport = true
-                            val pairs = viewModel.apiManagerService.parseImportFile(importTextContent)
-                            val validated = viewModel.apiManagerService.validateImportCandidates(pairs)
-                            isValidatingImport = false
-                            showImportDialog = false
-                            // Handle validation results...
+                if (validationItemsToConfirm == null) {
+                    Button(
+                        onClick = {
+                            coroutineScope.launch {
+                                isValidatingImport = true
+                                val pairs = viewModel.apiManagerService.parseImportFile(importTextContent)
+                                val validated = viewModel.apiManagerService.validateImportCandidates(pairs)
+                                isValidatingImport = false
+                                validationItemsToConfirm = validated
+                            }
+                        },
+                        enabled = importTextContent.isNotBlank() && !isValidatingImport
+                    ) {
+                        if (isValidatingImport) {
+                            CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                        } else {
+                            Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(if (isPersian) "بررسی و اعتبارسنجی" else "Validate Keys")
                         }
-                    },
-                    enabled = importTextContent.isNotBlank() && !isValidatingImport
-                ) {
-                    if (isValidatingImport) {
-                        CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
-                    } else {
-                        Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(if (isPersian) "بررسی و اعتبارسنجی" else "Validate Keys")
+                    }
+                } else {
+                    val items = validationItemsToConfirm!!
+                    if (items.isNotEmpty()) {
+                        Button(
+                            onClick = {
+                                viewModel.apiManagerService.commitImportedKeys(items)
+                                Toast.makeText(context, if (isPersian) "کلیدها با موفقیت ذخیره شدند" else "Keys successfully committed and stored", Toast.LENGTH_LONG).show()
+                                showImportDialog = false
+                                validationItemsToConfirm = null
+                            }
+                        ) {
+                            Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(if (isPersian) "تایید و ذخیره نهایی" else "Confirm & Save")
+                        }
                     }
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showImportDialog = false }) {
-                    Text(if (isPersian) "انصراف" else "Cancel")
+                if (validationItemsToConfirm == null) {
+                    TextButton(onClick = { showImportDialog = false }) {
+                        Text(if (isPersian) "انصراف" else "Cancel")
+                    }
+                } else {
+                    TextButton(onClick = { validationItemsToConfirm = null }) {
+                        Text(if (isPersian) "بازگشت" else "Back")
+                    }
                 }
             }
         )
@@ -1368,39 +1476,39 @@ fun ApiConfigItemCard(
     val displayName = api.displayNameFa.ifBlank { api.name }
 
     Card(
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(10.dp),
         colors = CardDefaults.cardColors(
             containerColor = if (api.isEnabled) MaterialTheme.colorScheme.surfaceContainerLow else MaterialTheme.colorScheme.surfaceContainerLowest
         ),
         modifier = Modifier.fillMaxWidth(),
         border = BorderStroke(
             0.5.dp,
-            if (api.isEnabled) MaterialTheme.colorScheme.primary.copy(alpha = 0.25f) else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+            if (api.isEnabled) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f) else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
         )
     ) {
         Column(
-            modifier = Modifier.padding(10.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
+            modifier = Modifier.padding(8.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             // Header Row: Brand Badge, Title & Switch
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 ProviderBrandBadge(
                     apiId = api.id,
                     category = api.category,
-                    size = 32.dp
+                    size = 26.dp
                 )
 
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = displayName,
-                        style = MaterialTheme.typography.titleSmall,
+                        style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface,
-                        fontSize = 13.sp,
+                        fontSize = 12.sp,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -1408,7 +1516,7 @@ fun ApiConfigItemCard(
                     // Compact Status Row: Live Ping & VPN Requirement Tag
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         val (statusText, statusColor) = when (api.connectionState) {
                             ApiConnectionState.CONNECTED -> Pair(
@@ -1424,23 +1532,23 @@ fun ApiConfigItemCard(
                         }
 
                         Surface(
-                            shape = RoundedCornerShape(4.dp),
-                            color = statusColor.copy(alpha = 0.12f)
+                            shape = RoundedCornerShape(3.dp),
+                            color = statusColor.copy(alpha = 0.1f)
                         ) {
                             Row(
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp),
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                horizontalArrangement = Arrangement.spacedBy(2.dp)
                             ) {
                                 Box(
                                     modifier = Modifier
-                                        .size(6.dp)
+                                        .size(4.dp)
                                         .clip(CircleShape)
                                         .background(statusColor)
                                 )
                                 Text(
                                     text = statusText,
-                                    fontSize = 10.sp,
+                                    fontSize = 9.sp,
                                     fontWeight = FontWeight.Medium,
                                     color = statusColor
                                 )
@@ -1451,15 +1559,15 @@ fun ApiConfigItemCard(
                         val vpnTagText = if (api.requiresVpn) (if (isPersian) "نیازمند VPN" else "VPN Req") else (if (isPersian) "مستقیم" else "Direct")
                         val vpnTagColor = if (api.requiresVpn) Color(0xFFE65100) else Color(0xFF00796B)
                         Surface(
-                            shape = RoundedCornerShape(4.dp),
-                            color = vpnTagColor.copy(alpha = 0.1f)
+                            shape = RoundedCornerShape(3.dp),
+                            color = vpnTagColor.copy(alpha = 0.08f)
                         ) {
                             Text(
                                 text = vpnTagText,
-                                fontSize = 10.sp,
+                                fontSize = 9.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 color = vpnTagColor,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
                             )
                         }
                     }
@@ -1468,7 +1576,7 @@ fun ApiConfigItemCard(
                 Switch(
                     checked = api.isEnabled,
                     onCheckedChange = onToggleEnabled,
-                    modifier = Modifier.scale(0.7f)
+                    modifier = Modifier.scale(0.6f)
                 )
             }
 
@@ -1477,35 +1585,36 @@ fun ApiConfigItemCard(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(8.dp))
+                        .clip(RoundedCornerShape(6.dp))
                         .background(MaterialTheme.colorScheme.surfaceContainer)
-                        .padding(6.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                        .padding(4.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     OutlinedTextField(
                         value = keyInput,
                         onValueChange = { keyInput = it },
-                        label = { Text(if (isPersian) "کلید اصلی API" else "Primary API Key", fontSize = 11.sp) },
+                        label = { Text(if (isPersian) "کلید اصلی API" else "Primary API Key", fontSize = 10.sp) },
                         visualTransformation = if (isKeyVisible) VisualTransformation.None else PasswordVisualTransformation(),
                         trailingIcon = {
                             IconButton(
                                 onClick = { isKeyVisible = !isKeyVisible },
-                                modifier = Modifier.size(28.dp)
+                                modifier = Modifier.size(24.dp)
                             ) {
                                 Icon(
                                     if (isKeyVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
                                     contentDescription = null,
-                                    modifier = Modifier.size(16.dp)
+                                    modifier = Modifier.size(14.dp)
                                 )
                             }
                         },
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth().height(48.dp),
                         singleLine = true,
-                        textStyle = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace, fontSize = 11.sp),
-                        shape = RoundedCornerShape(6.dp),
+                        textStyle = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace, fontSize = 10.sp),
+                        shape = RoundedCornerShape(4.dp),
                         colors = OutlinedTextFieldDefaults.colors(
                             unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                            focusedContainerColor = MaterialTheme.colorScheme.surface
+                            focusedContainerColor = MaterialTheme.colorScheme.surface,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
                         )
                     )
 
@@ -1513,51 +1622,52 @@ fun ApiConfigItemCard(
                         OutlinedTextField(
                             value = secondaryKeyInput,
                             onValueChange = { secondaryKeyInput = it },
-                            label = { Text(if (isPersian) "کلید دوم / Secret" else "Secondary Key / Secret", fontSize = 11.sp) },
+                            label = { Text(if (isPersian) "کلید دوم / Secret" else "Secondary Key / Secret", fontSize = 10.sp) },
                             visualTransformation = if (isSecondaryKeyVisible) VisualTransformation.None else PasswordVisualTransformation(),
                             trailingIcon = {
                                 IconButton(
                                     onClick = { isSecondaryKeyVisible = !isSecondaryKeyVisible },
-                                    modifier = Modifier.size(28.dp)
+                                    modifier = Modifier.size(24.dp)
                                 ) {
                                     Icon(
                                         if (isSecondaryKeyVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
                                         contentDescription = null,
-                                        modifier = Modifier.size(16.dp)
+                                        modifier = Modifier.size(14.dp)
                                     )
                                 }
                             },
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier.fillMaxWidth().height(48.dp),
                             singleLine = true,
-                            textStyle = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace, fontSize = 11.sp),
-                            shape = RoundedCornerShape(6.dp),
+                            textStyle = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace, fontSize = 10.sp),
+                            shape = RoundedCornerShape(4.dp),
                             colors = OutlinedTextFieldDefaults.colors(
                                 unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                                focusedContainerColor = MaterialTheme.colorScheme.surface
+                                focusedContainerColor = MaterialTheme.colorScheme.surface,
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
                             )
                         )
                     } else {
                         TextButton(
                             onClick = { showSecondaryKeyField = true },
-                            contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp),
-                            modifier = Modifier.height(26.dp)
+                            contentPadding = PaddingValues(horizontal = 4.dp, vertical = 1.dp),
+                            modifier = Modifier.height(22.dp)
                         ) {
-                            Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(14.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(if (isPersian) "افزودن پارامتر دوم" else "Add Secret Key", fontSize = 10.sp)
+                            Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(12.dp))
+                            Spacer(modifier = Modifier.width(2.dp))
+                            Text(if (isPersian) "افزودن پارامتر دوم" else "Add Secret Key", fontSize = 9.sp)
                         }
                     }
 
                     if (keyInput != api.apiKey || secondaryKeyInput != api.secondaryKey) {
                         Button(
                             onClick = { onSaveKey(keyInput, secondaryKeyInput) },
-                            modifier = Modifier.fillMaxWidth().height(32.dp),
-                            shape = RoundedCornerShape(6.dp),
+                            modifier = Modifier.fillMaxWidth().height(28.dp),
+                            shape = RoundedCornerShape(4.dp),
                             contentPadding = PaddingValues(0.dp)
                         ) {
-                            Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(14.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(if (isPersian) "ذخیره تغییرات" else "Save Changes", fontSize = 11.sp)
+                            Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(12.dp))
+                            Spacer(modifier = Modifier.width(3.dp))
+                            Text(if (isPersian) "ذخیره تغییرات" else "Save Changes", fontSize = 10.sp)
                         }
                     }
                 }
@@ -1590,47 +1700,47 @@ fun ApiConfigItemCard(
                             text = if (isPersian) "سهمیه:" else "Quota:",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontSize = 10.sp
+                            fontSize = 9.sp
                         )
                         Text(
                             text = if (quotaLimit > 0) "$quotaRemaining / $quotaLimit ($remainingPct٪)" else "$remainingPct٪",
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold,
                             fontFamily = FontFamily.Monospace,
-                            fontSize = 10.sp
+                            fontSize = 9.sp
                         )
                     }
-                    Spacer(modifier = Modifier.height(2.dp))
+                    Spacer(modifier = Modifier.height(1.dp))
                     LinearProgressIndicator(
                         progress = { progress },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(3.dp)
+                            .height(2.dp)
                             .clip(CircleShape),
                         color = barColor,
-                        trackColor = barColor.copy(alpha = 0.12f)
+                        trackColor = barColor.copy(alpha = 0.1f)
                     )
                 }
 
-                Spacer(modifier = Modifier.width(12.dp))
+                Spacer(modifier = Modifier.width(10.dp))
 
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     FilledTonalIconButton(
                         onClick = onTestConnection,
-                        modifier = Modifier.size(32.dp),
-                        shape = RoundedCornerShape(8.dp)
+                        modifier = Modifier.size(28.dp),
+                        shape = RoundedCornerShape(6.dp)
                     ) {
                         if (isTesting) {
-                            CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                            CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 1.5.dp)
                         } else {
-                            Icon(Icons.Default.Bolt, contentDescription = "Test", modifier = Modifier.size(16.dp))
+                            Icon(Icons.Default.Bolt, contentDescription = "Test", modifier = Modifier.size(14.dp))
                         }
                     }
                     IconButton(
                         onClick = onOpenHelp,
-                        modifier = Modifier.size(32.dp)
+                        modifier = Modifier.size(28.dp)
                     ) {
-                        Icon(Icons.Default.HelpOutline, contentDescription = "Help", modifier = Modifier.size(18.dp))
+                        Icon(Icons.Default.HelpOutline, contentDescription = "Help", modifier = Modifier.size(16.dp))
                     }
                 }
             }

@@ -120,9 +120,20 @@ class SecureStorageManager(context: Context) {
             .apply()
     }
 
-    fun getApiKeyPrimary(providerId: String): String {
+    fun getRawApiKeyPrimary(providerId: String): String {
         val encrypted = prefs.getString("key_primary_$providerId", "") ?: ""
         return decrypt(encrypted)
+    }
+
+    fun getApiKeyPrimary(providerId: String): String {
+        val raw = getRawApiKeyPrimary(providerId)
+        if (raw.contains("|")) {
+            val keys = raw.split("|").map { it.trim() }.filter { it.isNotBlank() }
+            if (keys.isNotEmpty()) {
+                return keys.random()
+            }
+        }
+        return raw
     }
 
     fun getApiKeySecondary(providerId: String): String {
