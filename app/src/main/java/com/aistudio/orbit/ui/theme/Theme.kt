@@ -33,7 +33,9 @@ val ForensicLightColorScheme = lightColorScheme(
     error = LightError,
     onError = LightOnError,
     errorContainer = LightErrorContainer,
-    onErrorContainer = LightOnErrorContainer
+    onErrorContainer = LightOnErrorContainer,
+    background = LightSurface,
+    onBackground = LightOnSurface
 )
 
 val ForensicDarkColorScheme = darkColorScheme(
@@ -62,7 +64,9 @@ val ForensicDarkColorScheme = darkColorScheme(
     error = DarkError,
     onError = DarkOnError,
     errorContainer = DarkErrorContainer,
-    onErrorContainer = DarkOnErrorContainer
+    onErrorContainer = DarkOnErrorContainer,
+    background = DarkSurface,
+    onBackground = DarkOnSurface
 )
 
 @Composable

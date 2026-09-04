@@ -14,7 +14,8 @@ import kotlin.math.*
 import kotlin.random.Random
 
 /**
- * State class to capture global screen interactions and feed them into the background.
+ * State container capturing touch and click events across the application to drive the
+ * interactive Gemini-inspired cosmic background.
  */
 class AntigravityInteractionState {
     var touchPosition by mutableStateOf<Offset?>(null)
@@ -22,47 +23,80 @@ class AntigravityInteractionState {
     var clickTrigger by mutableStateOf(0)
 }
 
-private class CosmicParticle(
-    var baseX: Float, // 0..1 normalized
-    var baseY: Float, // 0..1 normalized
-    val speed: Float,
+/**
+ * A single stardust particle in the 3D cosmic stream.
+ */
+private class GeminiStardustParticle(
+    var normX: Float,
+    var normY: Float,
+    val depthZ: Float, // 0.3f (distant, small, slow) to 1.0f (foreground, luminous)
+    val orbitSpeed: Float,
+    val orbitRadius: Float,
+    val phaseOffset: Float,
     val baseRadius: Float,
     val baseColor: Color,
-    val reactiveColor: Color,
-    val ribbonIndex: Int,
-    val phaseOffset: Float,
-    val orbitAmplitude: Float
+    val activeColor: Color,
+    val streamIndex: Int
 ) {
-    var colorIntensity = 0f
+    var currentX: Float = 0f
+    var currentY: Float = 0f
+    var colorShiftProgress: Float = 0f // 0f = baseColor, 1f = activeColor
+    var impulseOffsetX: Float = 0f
+    var impulseOffsetY: Float = 0f
 }
 
-private class ClickRippleParticle(
-    val startX: Float,
-    val startY: Float,
+/**
+ * Expanding circular shockwave caused by a tap or click.
+ */
+private class ShockwaveWave(
+    val centerX: Float,
+    val centerY: Float,
+    val maxRadius: Float,
+    val duration: Float
+) {
+    var age: Float = 0f
+    val currentRadius: Float
+        get() = (age / duration).coerceIn(0f, 1f) * maxRadius
+    val isExpired: Boolean
+        get() = age >= duration
+}
+
+/**
+ * Sparkle burst particles that radiate outward on tap/click.
+ */
+private class StardustSpark(
+    val originX: Float,
+    val originY: Float,
     val vx: Float,
     val vy: Float,
     val color: Color,
     val radius: Float,
     val maxAge: Float
 ) {
-    var age = 0f
+    var age: Float = 0f
 }
 
 /**
- * Highly polished, professional, and luxurious animated cosmic background.
- * Inspired by Google DeepMind / Gemini "about" aesthetics.
- * Features flowing ribbons of star dust, interactive mouse/touch reaction, and click ripples.
+ * Luxury Animated Background inspired by Google DeepMind / Gemini "About" page (gemini.google/us/about).
+ *
+ * Visual Highlights:
+ * 1. 3D swirling river of stardust particles with dual-pass glow halos.
+ * 2. Real physical reaction: Dragging/touching pulls particles into a swirling vortex with dynamic color transformation.
+ * 3. Tapping/clicking emits an expanding radial shockwave that displaces particles and flashes their colors into starlight.
+ * 4. Calibrated opacity ensuring the background remains subordinate to foreground forensic cards and text.
  */
 @Composable
 fun AntigravityNodeBackground(
     isDark: Boolean,
     interactionState: AntigravityInteractionState,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    dimFactor: Float = 0.85f // Calibrated softness: dimmer than web as requested
 ) {
-    // 1. Time state updated via high-performance game-loop tick
     var timeState by remember { mutableStateOf(0f) }
-    val activeClickParticles = remember { mutableStateListOf<ClickRippleParticle>() }
+    val activeShockwaves = remember { mutableStateListOf<ShockwaveWave>() }
+    val activeSparks = remember { mutableStateListOf<StardustSpark>() }
 
+    // Game-loop frame ticker for fluid 60/120fps animation
     LaunchedEffect(Unit) {
         var lastTime = System.nanoTime()
         while (true) {
@@ -71,262 +105,388 @@ fun AntigravityNodeBackground(
                 lastTime = frameTime
                 timeState += elapsedSec
 
-                // Update click burst particles
-                if (activeClickParticles.isNotEmpty()) {
-                    val iterator = activeClickParticles.iterator()
-                    while (iterator.hasNext()) {
-                        val p = iterator.next()
-                        p.age += elapsedSec
-                        if (p.age >= p.maxAge) {
-                            iterator.remove()
-                        }
+                // Update shockwaves
+                if (activeShockwaves.isNotEmpty()) {
+                    val it = activeShockwaves.iterator()
+                    while (it.hasNext()) {
+                        val sw = it.next()
+                        sw.age += elapsedSec
+                        if (sw.isExpired) it.remove()
+                    }
+                }
+
+                // Update sparks
+                if (activeSparks.isNotEmpty()) {
+                    val it = activeSparks.iterator()
+                    while (it.hasNext()) {
+                        val spark = it.next()
+                        spark.age += elapsedSec
+                        if (spark.age >= spark.maxAge) it.remove()
                     }
                 }
             }
         }
     }
 
-    // 2. Click ripple spawn action
+    // Tap / Click Handler: triggers shockwave pulse and stardust sparks
     LaunchedEffect(interactionState.clickTrigger) {
         val clickPos = interactionState.lastClickPosition
-        if (clickPos != null) {
+        if (clickPos != null && interactionState.clickTrigger > 0) {
+            // Add expanding shockwave
+            activeShockwaves.add(
+                ShockwaveWave(
+                    centerX = clickPos.x,
+                    centerY = clickPos.y,
+                    maxRadius = 600f,
+                    duration = 0.9f
+                )
+            )
+
+            // Add stardust sparklers
             val random = Random(System.currentTimeMillis())
-            // Cyan/Blue spark in dark, Lavender/Indigo spark in light
-            val sparkColor = if (isDark) Color(0xFF06B6D4) else Color(0xFF6366F1)
-            for (i in 0 until 24) {
+            val sparkColor = if (isDark) Color(0xFF00E5FF) else Color(0xFF2563EB)
+            for (i in 0 until 18) {
                 val angle = random.nextFloat() * 2f * PI.toFloat()
-                val speed = 60f + random.nextFloat() * 240f
-                val vx = cos(angle) * speed
-                val vy = sin(angle) * speed
-                val radius = 0.8f + random.nextFloat() * 2.2f
-                val maxAge = 0.5f + random.nextFloat() * 0.7f
-                activeClickParticles.add(
-                    ClickRippleParticle(
-                        startX = clickPos.x,
-                        startY = clickPos.y,
-                        vx = vx,
-                        vy = vy,
+                val speed = 80f + random.nextFloat() * 260f
+                activeSparks.add(
+                    StardustSpark(
+                        originX = clickPos.x,
+                        originY = clickPos.y,
+                        vx = cos(angle) * speed,
+                        vy = sin(angle) * speed,
                         color = sparkColor,
-                        radius = radius,
-                        maxAge = maxAge
+                        radius = 0.8f + random.nextFloat() * 2.2f,
+                        maxAge = 0.45f + random.nextFloat() * 0.55f
                     )
                 )
             }
         }
     }
 
-    // 3. Initialize background particles distributed across flowing rivers
-    val baseParticles = remember(isDark) {
-        val random = Random(2026)
-        val list = ArrayList<CosmicParticle>()
-        val count = 90
-        
-        for (i in 0 until count) {
-            val ribbon = i % 3
-            val baseX = random.nextFloat()
-            val baseY = when (ribbon) {
-                0 -> 0.20f + random.nextFloat() * 0.15f
-                1 -> 0.50f + random.nextFloat() * 0.15f
-                else -> 0.80f + random.nextFloat() * 0.12f
+    // Particles system definition (Gemini color spectrum)
+    val particles = remember(isDark) {
+        val random = Random(42)
+        val list = ArrayList<GeminiStardustParticle>()
+        val particleCount = 110
+
+        for (i in 0 until particleCount) {
+            val stream = i % 3
+            val normX = random.nextFloat()
+            val normY = when (stream) {
+                0 -> 0.15f + random.nextFloat() * 0.22f // Top header/hero stream
+                1 -> 0.42f + random.nextFloat() * 0.20f // Mid ambient stream
+                else -> 0.70f + random.nextFloat() * 0.22f // Lower subtle stream
             }
-            val speed = 0.015f + random.nextFloat() * 0.025f
-            val radius = 0.6f + random.nextFloat() * 1.8f
-            
-            // Refined luxury palette: Cobalt Blue, Mystical Indigo, Soft Orchid/Rose
-            val baseColor = when (ribbon) {
-                0 -> if (isDark) Color(0xFF0EA5E9) else Color(0xFF0284C7)
-                1 -> if (isDark) Color(0xFF818CF8) else Color(0xFF4F46E5)
-                else -> if (isDark) Color(0xFFF472B6) else Color(0xFFDB2777)
+            val depthZ = 0.35f + random.nextFloat() * 0.65f
+            val orbitSpeed = (0.012f + random.nextFloat() * 0.024f) * (0.8f + depthZ * 0.4f)
+            val orbitRadius = 14f + random.nextFloat() * 28f
+            val baseRadius = (0.8f + random.nextFloat() * 2.0f) * depthZ
+
+            // Gemini signature colors:
+            // Dark: Electric Cyan, Cosmic Blue, Neon Violet, Starlight Purple
+            // Light: Sapphire Blue, Ethereal Cerulean, Lavender Mist
+            val baseColor = if (isDark) {
+                when (stream) {
+                    0 -> Color(0xFF00E5FF) // Electric Cyan
+                    1 -> Color(0xFF3B82F6) // Celestial Blue
+                    else -> Color(0xFFA855F7) // Cosmic Violet
+                }
+            } else {
+                when (stream) {
+                    0 -> Color(0xFF0284C7) // Sky Blue
+                    1 -> Color(0xFF2563EB) // Royal Sapphire
+                    else -> Color(0xFF7C3AED) // Muted Violet
+                }
             }
-            // Transition color when touched: Warm Golden Amber
-            val reactiveColor = if (isDark) Color(0xFFFBBF24) else Color(0xFFD97706)
+
+            // Reactive Color when touched or shocked:
+            // Dark: Radiant Amber-Gold, Solar Coral, Luminous Magenta
+            // Light: Warm Sunset Orange, Coral Rose
+            val activeColor = if (isDark) {
+                when (stream) {
+                    0 -> Color(0xFFF59E0B) // Amber Gold
+                    1 -> Color(0xFFF97316) // Solar Orange
+                    else -> Color(0xFFEC4899) // Hot Magenta
+                }
+            } else {
+                when (stream) {
+                    0 -> Color(0xFFEA580C) // Warm Coral
+                    1 -> Color(0xFFE11D48) // Rose
+                    else -> Color(0xFFD97706) // Golden Bronze
+                }
+            }
 
             list.add(
-                CosmicParticle(
-                    baseX = baseX,
-                    baseY = baseY,
-                    speed = speed,
-                    baseRadius = radius,
-                    baseColor = baseColor,
-                    reactiveColor = reactiveColor,
-                    ribbonIndex = ribbon,
+                GeminiStardustParticle(
+                    normX = normX,
+                    normY = normY,
+                    depthZ = depthZ,
+                    orbitSpeed = orbitSpeed,
+                    orbitRadius = orbitRadius,
                     phaseOffset = random.nextFloat() * 2f * PI.toFloat(),
-                    orbitAmplitude = 12f + random.nextFloat() * 28f
+                    baseRadius = baseRadius,
+                    baseColor = baseColor,
+                    activeColor = activeColor,
+                    streamIndex = stream
                 )
             )
         }
         list
     }
 
-    // 4. Color theme gradients
-    val bgGradientColors = if (isDark) {
-        listOf(
-            Color(0xFF0B0F19), // Deep Obsidian Charcoal
-            Color(0xFF070A10), // Midnight Jet Black
-            Color(0xFF0A0E17)  // Deep Indigo Space
-        )
-    } else {
-        listOf(
-            Color(0xFFF4F6FA), // Cream Slate
-            Color(0xFFECF0F6), // Pure Light Alabaster
-            Color(0xFFF0F3F7)  // Warm Neutral Ice
-        )
-    }
-
-    // Interactive soft glow spots (Nebulas) that slowly drift and hover
-    val glowSpot1Center = Offset(
-        x = (0.3f + sin(timeState * 0.1f) * 0.2f),
-        y = (0.25f + cos(timeState * 0.08f) * 0.15f)
-    )
-    val glowSpot2Center = Offset(
-        x = (0.7f + cos(timeState * 0.12f) * 0.18f),
-        y = (0.70f + sin(timeState * 0.09f) * 0.12f)
-    )
+    // Base canvas colors
+    val baseCanvasColor = if (isDark) Color(0xFF080C14) else Color(0xFFF1F5F9)
+    val canvasFadeBottom = if (isDark) Color(0xFF06090F) else Color(0xFFEEF2F6)
 
     Canvas(modifier = modifier.fillMaxSize()) {
         val width = size.width
         val height = size.height
         if (width <= 0f || height <= 0f) return@Canvas
 
-        // Draw radial background gradient
+        // 1. Base subtle canvas gradient
         drawRect(
-            brush = Brush.radialGradient(
-                colors = bgGradientColors,
-                center = Offset(width * 0.5f, height * 0.45f),
-                radius = max(width, height) * 0.9f
+            brush = Brush.verticalGradient(
+                colors = listOf(baseCanvasColor, canvasFadeBottom)
             )
         )
 
-        // Draw ambient glowing nebulas behind the text
-        val glow1Color = if (isDark) Color(0xFF0284C7).copy(alpha = 0.05f) else Color(0xFFE0F2FE).copy(alpha = 0.40f)
-        val glow2Color = if (isDark) Color(0xFF6366F1).copy(alpha = 0.04f) else Color(0xFFEEF2F6).copy(alpha = 0.35f)
-
+        // 2. Ambient drifting cosmic glow nebulae (very soft and subtle)
+        val nebula1Center = Offset(
+            x = width * (0.35f + sin(timeState * 0.08f) * 0.18f),
+            y = height * (0.22f + cos(timeState * 0.07f) * 0.12f)
+        )
+        val nebulaColor1 = if (isDark) Color(0xFF1E3A8A).copy(alpha = 0.08f * dimFactor) else Color(0xFFDBEAFE).copy(alpha = 0.35f * dimFactor)
         drawCircle(
             brush = Brush.radialGradient(
-                colors = listOf(glow1Color, Color.Transparent),
-                center = Offset(glowSpot1Center.x * width, glowSpot1Center.y * height),
-                radius = width * 0.45f
+                colors = listOf(nebulaColor1, Color.Transparent),
+                center = nebula1Center,
+                radius = width * 0.55f
             ),
-            radius = width * 0.45f,
-            center = Offset(glowSpot1Center.x * width, glowSpot1Center.y * height)
+            radius = width * 0.55f,
+            center = nebula1Center
         )
 
+        val nebula2Center = Offset(
+            x = width * (0.72f + cos(timeState * 0.09f) * 0.15f),
+            y = height * (0.48f + sin(timeState * 0.06f) * 0.14f)
+        )
+        val nebulaColor2 = if (isDark) Color(0xFF581C87).copy(alpha = 0.06f * dimFactor) else Color(0xFFF3E8FF).copy(alpha = 0.30f * dimFactor)
         drawCircle(
             brush = Brush.radialGradient(
-                colors = listOf(glow2Color, Color.Transparent),
-                center = Offset(glowSpot2Center.x * width, glowSpot2Center.y * height),
-                radius = width * 0.45f
+                colors = listOf(nebulaColor2, Color.Transparent),
+                center = nebula2Center,
+                radius = width * 0.50f
             ),
-            radius = width * 0.45f,
-            center = Offset(glowSpot2Center.x * width, glowSpot2Center.y * height)
+            radius = width * 0.50f,
+            center = nebula2Center
         )
 
-        // Pre-allocate containers for continuous wave filaments
-        val ribbon0 = ArrayList<Offset>()
-        val ribbon1 = ArrayList<Offset>()
-        val ribbon2 = ArrayList<Offset>()
+        // 3. Process each stardust particle
+        val touch = interactionState.touchPosition
+        val touchInfluence = 180f * density
 
-        // Update positions & collect ribbon points
-        for (particle in baseParticles) {
-            val driftX = (particle.baseX + timeState * particle.speed) % 1.0f
+        for (p in particles) {
+            // Calculate orbital drift along fluid wave
+            val driftX = (p.normX + timeState * p.orbitSpeed) % 1.0f
             var px = driftX * width
-            
-            val ribbonBaseY = when (particle.ribbonIndex) {
-                0 -> height * 0.22f
-                1 -> height * 0.52f
-                else -> height * 0.82f
+
+            val streamBaseY = when (p.streamIndex) {
+                0 -> height * 0.20f
+                1 -> height * 0.48f
+                else -> height * 0.76f
             }
+            val wavePhase = driftX * 2.2f * PI.toFloat() + timeState * 0.3f + p.phaseOffset
+            var py = streamBaseY + sin(wavePhase) * (p.orbitRadius * density)
 
-            val wavePhase = driftX * 2f * PI.toFloat() * 1.3f + timeState * 0.25f + particle.phaseOffset
-            var py = ribbonBaseY + sin(wavePhase) * (particle.orbitAmplitude * density)
-
-            // Touch interaction physics
-            val touch = interactionState.touchPosition
+            // Touch interaction physics: whirlpool attraction and color shift
+            var touchInfluenceRatio = 0f
             if (touch != null) {
                 val dx = px - touch.x
                 val dy = py - touch.y
                 val dist = sqrt(dx * dx + dy * dy)
-                val maxDist = 180f * density
-                if (dist < maxDist) {
-                    val force = (1f - dist / maxDist)
-                    // Pull particles gently towards touch coordinate
-                    px -= dx * force * 0.28f
-                    py -= dy * force * 0.28f
-                    particle.colorIntensity = (particle.colorIntensity + 0.12f).coerceAtMost(1f)
-                } else {
-                    particle.colorIntensity = (particle.colorIntensity - 0.04f).coerceAtLeast(0f)
+                if (dist < touchInfluence && dist > 1f) {
+                    touchInfluenceRatio = (1f - dist / touchInfluence)
+                    // Vortex attraction force
+                    val pull = touchInfluenceRatio * 0.32f
+                    px -= dx * pull
+                    py -= dy * pull
+                    // Add subtle vortex swirl perpendicular to vector
+                    px += -dy * (pull * 0.2f)
+                    py += dx * (pull * 0.2f)
                 }
+            }
+
+            // Shockwave interaction physics: radial push + instant color ignition
+            for (sw in activeShockwaves) {
+                val dx = px - sw.centerX
+                val dy = py - sw.centerY
+                val dist = sqrt(dx * dx + dy * dy)
+                val waveDist = abs(dist - sw.currentRadius)
+                val waveWidth = 50f * density
+                if (waveDist < waveWidth && dist > 1f) {
+                    val strength = (1f - waveDist / waveWidth) * (1f - sw.age / sw.duration)
+                    // Push particle outward along shockwave normal
+                    val nx = dx / dist
+                    val ny = dy / dist
+                    p.impulseOffsetX += nx * strength * 24f * density
+                    p.impulseOffsetY += ny * strength * 24f * density
+                    touchInfluenceRatio = max(touchInfluenceRatio, strength)
+                }
+            }
+
+            // Apply and decay impulse offsets smoothly
+            px += p.impulseOffsetX
+            py += p.impulseOffsetY
+            p.impulseOffsetX *= 0.88f
+            p.impulseOffsetY *= 0.88f
+
+            // Smooth color transition
+            p.colorShiftProgress = if (touchInfluenceRatio > p.colorShiftProgress) {
+                (p.colorShiftProgress + 0.18f).coerceAtMost(touchInfluenceRatio)
             } else {
-                particle.colorIntensity = (particle.colorIntensity - 0.03f).coerceAtLeast(0f)
+                (p.colorShiftProgress - 0.04f).coerceAtLeast(0f)
             }
 
-            val finalPos = Offset(px, py)
-            when (particle.ribbonIndex) {
-                0 -> ribbon0.add(finalPos)
-                1 -> ribbon1.add(finalPos)
-                else -> ribbon2.add(finalPos)
-            }
+            p.currentX = px
+            p.currentY = py
 
-            // Interpolate color based on touch reaction state
-            val finalColor = if (particle.colorIntensity > 0f) {
-                Color.interpolate(particle.baseColor, particle.reactiveColor, particle.colorIntensity)
+            // Interpolate color between cool base and radiant active
+            val drawColor = if (p.colorShiftProgress > 0.01f) {
+                Color.interpolate(p.baseColor, p.activeColor, p.colorShiftProgress)
             } else {
-                particle.baseColor
+                p.baseColor
             }
 
-            // Draw very soft, tiny particles to maintain complete readability
-            val particleAlpha = if (isDark) 0.18f + (particle.colorIntensity * 0.4f) else 0.12f + (particle.colorIntensity * 0.3f)
+            // Vertical position fade: upper header area is brightest, fading toward lower screen
+            val verticalFade = (1.0f - (py / height) * 0.65f).coerceIn(0.25f, 1.0f)
+            val baseAlpha = if (isDark) {
+                (0.18f + p.depthZ * 0.22f + p.colorShiftProgress * 0.40f) * dimFactor * verticalFade
+            } else {
+                (0.14f + p.depthZ * 0.18f + p.colorShiftProgress * 0.35f) * dimFactor * verticalFade
+            }
+
+            val particleCenter = Offset(px, py)
+            val particleRadius = p.baseRadius * density
+
+            // Dual-Pass Rendering:
+            // Pass 1: Luminous bloom halo
             drawCircle(
-                color = finalColor.copy(alpha = particleAlpha),
-                radius = particle.baseRadius * density,
-                center = finalPos
+                color = drawColor.copy(alpha = baseAlpha * 0.35f),
+                radius = particleRadius * 2.8f,
+                center = particleCenter
+            )
+
+            // Pass 2: Crisp starlight core
+            drawCircle(
+                color = drawColor.copy(alpha = baseAlpha.coerceAtMost(1f)),
+                radius = particleRadius,
+                center = particleCenter
             )
         }
 
-        // Draw elegant flowing wave lines connecting the particles in each ribbon (Gemini River)
-        val filamentColor = if (isDark) Color(0xFF6366F1).copy(alpha = 0.05f) else Color(0xFF818CF8).copy(alpha = 0.03f)
-        val maxSegmentLength = width * 0.28f // Do not connect points wrapping around boundaries
-
-        fun drawRibbonFilaments(ribbon: List<Offset>) {
-            val sorted = ribbon.sortedBy { it.x }
-            for (idx in 0 until sorted.size - 1) {
-                val p1 = sorted[idx]
-                val p2 = sorted[idx + 1]
-                if (abs(p1.x - p2.x) < maxSegmentLength) {
-                    drawLine(
-                        color = filamentColor,
-                        start = p1,
-                        end = p2,
-                        strokeWidth = 1f * density
-                    )
-                }
-            }
-        }
-
-        drawRibbonFilaments(ribbon0)
-        drawRibbonFilaments(ribbon1)
-        drawRibbonFilaments(ribbon2)
-
-        // Draw active Click Burst Particles (Stardust sparkler effect)
-        for (p in activeClickParticles) {
-            val px = p.startX + p.vx * p.age
-            val py = p.startY + p.vy * p.age
-            val progress = p.age / p.maxAge
-            val alpha = (1f - progress).coerceIn(0f, 1f)
+        // 4. Render active sparklers from clicks/taps
+        for (spark in activeSparks) {
+            val progress = spark.age / spark.maxAge
+            val sx = spark.originX + spark.vx * spark.age
+            val sy = spark.originY + spark.vy * spark.age
+            val alpha = ((1f - progress) * 0.45f * dimFactor).coerceIn(0f, 1f)
 
             drawCircle(
-                color = p.color.copy(alpha = alpha * 0.32f),
-                radius = p.radius * density * (1f + progress * 0.5f),
-                center = Offset(px, py)
+                color = spark.color.copy(alpha = alpha),
+                radius = spark.radius * density * (1f + progress * 0.6f),
+                center = Offset(sx, sy)
+            )
+        }
+    }
+}
+
+/**
+ * Dedicated Header-Specific Animated Gemini Stardust Background.
+ * Designed specifically for inclusion inside [OrbitTopAppBar] so that every single screen
+ * header features the flowing, animated stardust stream.
+ */
+@Composable
+fun AntigravityHeaderBackground(
+    isDark: Boolean,
+    modifier: Modifier = Modifier
+) {
+    var timeState by remember { mutableStateOf(0f) }
+
+    LaunchedEffect(Unit) {
+        var lastTime = System.nanoTime()
+        while (true) {
+            withFrameNanos { frameTime ->
+                val elapsedSec = (frameTime - lastTime) / 1_000_000_000f
+                lastTime = frameTime
+                timeState += elapsedSec
+            }
+        }
+    }
+
+    val headerParticles = remember(isDark) {
+        val random = Random(99)
+        val list = ArrayList<GeminiStardustParticle>()
+        for (i in 0 until 40) {
+            val normX = random.nextFloat()
+            val normY = 0.15f + random.nextFloat() * 0.70f
+            val depthZ = 0.4f + random.nextFloat() * 0.6f
+            val orbitSpeed = 0.025f + random.nextFloat() * 0.035f
+            val baseRadius = 0.7f + random.nextFloat() * 1.5f
+            val baseColor = if (isDark) {
+                if (i % 2 == 0) Color(0xFF00E5FF) else Color(0xFF818CF8)
+            } else {
+                if (i % 2 == 0) Color(0xFF0284C7) else Color(0xFF6366F1)
+            }
+            list.add(
+                GeminiStardustParticle(
+                    normX = normX,
+                    normY = normY,
+                    depthZ = depthZ,
+                    orbitSpeed = orbitSpeed,
+                    orbitRadius = 8f + random.nextFloat() * 12f,
+                    phaseOffset = random.nextFloat() * 2f * PI.toFloat(),
+                    baseRadius = baseRadius,
+                    baseColor = baseColor,
+                    activeColor = Color(0xFFF59E0B),
+                    streamIndex = 0
+                )
+            )
+        }
+        list
+    }
+
+    Canvas(modifier = modifier.fillMaxSize()) {
+        val width = size.width
+        val height = size.height
+        if (width <= 0f || height <= 0f) return@Canvas
+
+        for (p in headerParticles) {
+            val driftX = (p.normX + timeState * p.orbitSpeed) % 1.0f
+            val px = driftX * width
+            val py = p.normY * height + sin(driftX * 2.5f * PI.toFloat() + timeState * 0.4f + p.phaseOffset) * (p.orbitRadius * density)
+            val center = Offset(px, py)
+            val radius = p.baseRadius * density
+            val alpha = if (isDark) 0.28f else 0.20f
+
+            drawCircle(
+                color = p.baseColor.copy(alpha = alpha * 0.4f),
+                radius = radius * 2.2f,
+                center = center
+            )
+            drawCircle(
+                color = p.baseColor.copy(alpha = alpha),
+                radius = radius,
+                center = center
             )
         }
     }
 }
 
 private fun Color.Companion.interpolate(from: Color, to: Color, progress: Float): Color {
-    val r = from.red + (to.red - from.red) * progress
-    val g = from.green + (to.green - from.green) * progress
-    val b = from.blue + (to.blue - from.blue) * progress
-    val a = from.alpha + (to.alpha - from.alpha) * progress
+    val p = progress.coerceIn(0f, 1f)
+    val r = from.red + (to.red - from.red) * p
+    val g = from.green + (to.green - from.green) * p
+    val b = from.blue + (to.blue - from.blue) * p
+    val a = from.alpha + (to.alpha - from.alpha) * p
     return Color(r, g, b, a)
 }

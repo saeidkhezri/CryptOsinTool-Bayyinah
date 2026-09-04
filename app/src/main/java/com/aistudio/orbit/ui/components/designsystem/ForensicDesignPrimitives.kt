@@ -21,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
@@ -281,10 +282,12 @@ fun ForensicBadge(
     contentColor: Color? = null,
     icon: ImageVector? = null
 ) {
+    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+
     val effectiveContainer = containerColor ?: when (badgeType) {
         ForensicBadgeType.PRIMARY -> MaterialTheme.colorScheme.primaryContainer
-        ForensicBadgeType.SUCCESS -> Color(0xFF2E7D32).copy(alpha = 0.15f)
-        ForensicBadgeType.WARNING -> Color(0xFFFFA000).copy(alpha = 0.15f)
+        ForensicBadgeType.SUCCESS -> if (isDark) Color(0xFF4ADE80).copy(alpha = 0.15f) else Color(0xFF166534).copy(alpha = 0.15f)
+        ForensicBadgeType.WARNING -> if (isDark) Color(0xFFFBBF24).copy(alpha = 0.15f) else Color(0xFFB45309).copy(alpha = 0.15f)
         ForensicBadgeType.ERROR -> MaterialTheme.colorScheme.errorContainer
         ForensicBadgeType.INFO -> MaterialTheme.colorScheme.secondaryContainer
         ForensicBadgeType.MUTED -> MaterialTheme.colorScheme.surfaceVariant
@@ -292,8 +295,8 @@ fun ForensicBadge(
 
     val effectiveContent = contentColor ?: when (badgeType) {
         ForensicBadgeType.PRIMARY -> MaterialTheme.colorScheme.onPrimaryContainer
-        ForensicBadgeType.SUCCESS -> Color(0xFF2E7D32)
-        ForensicBadgeType.WARNING -> Color(0xFFE65100)
+        ForensicBadgeType.SUCCESS -> if (isDark) Color(0xFF4ADE80) else Color(0xFF166534)
+        ForensicBadgeType.WARNING -> if (isDark) Color(0xFFFBBF24) else Color(0xFFB45309)
         ForensicBadgeType.ERROR -> MaterialTheme.colorScheme.onErrorContainer
         ForensicBadgeType.INFO -> MaterialTheme.colorScheme.onSecondaryContainer
         ForensicBadgeType.MUTED -> MaterialTheme.colorScheme.onSurfaceVariant
@@ -444,35 +447,37 @@ fun ForensicEpistemicBadge(
     confidencePercent: Int? = null,
     compact: Boolean = false
 ) {
+    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+
     val (containerColor, contentColor, icon) = when (type) {
         ForensicEpistemicType.OBSERVED_FACT -> Triple(
-            Color(0xFF1B5E20).copy(alpha = 0.15f),
-            Color(0xFF2E7D32),
+            if (isDark) Color(0xFF4ADE80).copy(alpha = 0.15f) else Color(0xFF1B5E20).copy(alpha = 0.15f),
+            if (isDark) Color(0xFF4ADE80) else Color(0xFF2E7D32),
             Icons.Default.Verified
         )
         ForensicEpistemicType.EXTERNAL_SOURCE -> Triple(
-            Color(0xFF0D47A1).copy(alpha = 0.15f),
-            Color(0xFF1565C0),
+            if (isDark) Color(0xFF60A5FA).copy(alpha = 0.15f) else Color(0xFF0D47A1).copy(alpha = 0.15f),
+            if (isDark) Color(0xFF60A5FA) else Color(0xFF1565C0),
             Icons.Default.Public
         )
         ForensicEpistemicType.CALCULATED -> Triple(
-            Color(0xFF4A148C).copy(alpha = 0.15f),
-            Color(0xFF7B1FA2),
+            if (isDark) Color(0xFFC084FC).copy(alpha = 0.15f) else Color(0xFF4A148C).copy(alpha = 0.15f),
+            if (isDark) Color(0xFFC084FC) else Color(0xFF7B1FA2),
             Icons.Default.Analytics
         )
         ForensicEpistemicType.INFERENCE -> Triple(
-            Color(0xFFE65100).copy(alpha = 0.15f),
-            Color(0xFFEF6C00),
+            if (isDark) Color(0xFFFB923C).copy(alpha = 0.15f) else Color(0xFFE65100).copy(alpha = 0.15f),
+            if (isDark) Color(0xFFFB923C) else Color(0xFFEF6C00),
             Icons.Default.Psychology
         )
         ForensicEpistemicType.HYPOTHESIS -> Triple(
-            Color(0xFFF57F17).copy(alpha = 0.15f),
-            Color(0xFFF9A825),
+            if (isDark) Color(0xFFFBBF24).copy(alpha = 0.15f) else Color(0xFFF57F17).copy(alpha = 0.15f),
+            if (isDark) Color(0xFFFBBF24) else Color(0xFFF9A825),
             Icons.Default.Lightbulb
         )
         ForensicEpistemicType.INVESTIGATOR_ASSESSMENT -> Triple(
-            Color(0xFF004D40).copy(alpha = 0.15f),
-            Color(0xFF00796B),
+            if (isDark) Color(0xFF2DD4BF).copy(alpha = 0.15f) else Color(0xFF004D40).copy(alpha = 0.15f),
+            if (isDark) Color(0xFF2DD4BF) else Color(0xFF00796B),
             Icons.Default.AssignmentInd
         )
         ForensicEpistemicType.UNKNOWN -> Triple(

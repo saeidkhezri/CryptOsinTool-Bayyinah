@@ -7,6 +7,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -89,6 +90,12 @@ class MainActivity : ComponentActivity() {
             val useLuxuryBackground by investigationViewModel.settingsRepo.useLuxuryBackground.collectAsState()
 
             CompositionLocalProvider(LocalLayoutDirection provides layoutDirection) {
+                val isDarkTheme = when (themeMode) {
+                    ThemeMode.SYSTEM -> isSystemInDarkTheme()
+                    ThemeMode.LIGHT -> false
+                    ThemeMode.DARK -> true
+                }
+
                 OrbitForensicsTheme(
                     themeMode = themeMode,
                     useDynamicColor = useDynamicColor
@@ -121,7 +128,7 @@ class MainActivity : ComponentActivity() {
                     ) {
                         if (useLuxuryBackground) {
                             com.aistudio.orbit.ui.components.AntigravityNodeBackground(
-                                isDark = (themeMode == ThemeMode.DARK),
+                                isDark = isDarkTheme,
                                 interactionState = backgroundInteractionState
                             )
                         }

@@ -35,7 +35,7 @@ class SettingsRepository(context: Context) {
     private val KEY_LEDGER_CACHE = "ledger_cache_enabled"
     private val KEY_STRICT_SSL = "strict_ssl_enabled"
     
-    private val _useLuxuryBackground = MutableStateFlow(prefs.getBoolean(KEY_USE_LUXURY_BACKGROUND, false))
+    private val _useLuxuryBackground = MutableStateFlow(prefs.getBoolean(KEY_USE_LUXURY_BACKGROUND, true))
     val useLuxuryBackground: StateFlow<Boolean> = _useLuxuryBackground.asStateFlow()
     
     private val _language = MutableStateFlow(

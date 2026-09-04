@@ -23,6 +23,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -208,12 +209,13 @@ fun OsintInvestigationView(
                                         badgeType = ForensicBadgeType.PRIMARY
                                     )
                                     if (session != null) {
+                                        val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
                                         val riskColor = when (session.aggregateRiskCategory) {
                                             BehavioralRiskCategory.SANCTIONS_EXPOSURE -> MaterialTheme.colorScheme.error
-                                            BehavioralRiskCategory.MIXER_EXPOSURE, BehavioralRiskCategory.DARKWEB_EXPOSURE -> Color(0xFFE65100)
-                                            BehavioralRiskCategory.SCAM_REPORTS -> Color(0xFFF57C00)
-                                            BehavioralRiskCategory.POTENTIALLY_SUSPICIOUS -> Color(0xFFFFA000)
-                                            else -> Color(0xFF2E7D32)
+                                            BehavioralRiskCategory.MIXER_EXPOSURE, BehavioralRiskCategory.DARKWEB_EXPOSURE -> if (isDark) Color(0xFFFB923C) else Color(0xFFE65100)
+                                            BehavioralRiskCategory.SCAM_REPORTS -> if (isDark) Color(0xFFFBBF24) else Color(0xFFF57C00)
+                                            BehavioralRiskCategory.POTENTIALLY_SUSPICIOUS -> if (isDark) Color(0xFFFDE047) else Color(0xFFFFA000)
+                                            else -> if (isDark) Color(0xFF4ADE80) else Color(0xFF2E7D32)
                                         }
                                         ForensicBadge(
                                             text = if (isFa) session.aggregateRiskCategory.displayNameFa else session.aggregateRiskCategory.displayNameEn,

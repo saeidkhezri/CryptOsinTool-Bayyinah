@@ -260,6 +260,7 @@ fun InvestigationWorkspaceView(
     ) {
         Scaffold(
             containerColor = if (useLuxuryBackground) Color.Transparent else MaterialTheme.colorScheme.background,
+            contentColor = MaterialTheme.colorScheme.onBackground,
             topBar = {
                 TopAppBar(
                     title = {

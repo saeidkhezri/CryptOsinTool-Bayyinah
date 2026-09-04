@@ -82,7 +82,7 @@ fun DashboardView(
             // Main Dashboard Identity Hero Card
             item {
                 ForensicCard(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f),
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer,
                     borderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
                 ) {
                     Column(
@@ -509,7 +509,7 @@ fun DashboardView(
             // Legal & Methodological Disclaimer Notice
             item {
                 ForensicCard(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.6f)
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),

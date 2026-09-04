@@ -1,6 +1,7 @@
 package com.aistudio.orbit.ui.components
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -11,6 +12,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -33,8 +35,10 @@ fun OrbitTopAppBar(
     actions: @Composable (RowScope.() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
+    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+
     Surface(
-        color = MaterialTheme.colorScheme.surface,
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f),
         tonalElevation = ForensicElevation.card,
         shadowElevation = ForensicElevation.subtle,
         modifier = modifier.fillMaxWidth()
@@ -43,10 +47,21 @@ fun OrbitTopAppBar(
             modifier = Modifier
                 .fillMaxWidth()
                 .statusBarsPadding()
-                .padding(horizontal = ForensicSpacing.sm, vertical = ForensicSpacing.xs)
-                .heightIn(min = 52.dp),
+                .heightIn(min = 54.dp),
             contentAlignment = Alignment.Center
         ) {
+            // Luxury Gemini-inspired stardust animation in the header
+            AntigravityHeaderBackground(
+                isDark = isDark,
+                modifier = Modifier.matchParentSize()
+            )
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = ForensicSpacing.sm, vertical = ForensicSpacing.xs),
+                contentAlignment = Alignment.Center
+            ) {
             // 1. Navigation / Logo slot on the start side
             Row(
                 modifier = Modifier
@@ -138,6 +153,7 @@ fun OrbitTopAppBar(
             }
         }
     }
+}
 }
 
 

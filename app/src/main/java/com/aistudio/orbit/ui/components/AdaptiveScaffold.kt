@@ -35,6 +35,7 @@ fun AdaptiveScaffold(
             bottomBar = bottomBar,
             floatingActionButton = floatingActionButton,
             containerColor = containerColor,
+            contentColor = MaterialTheme.colorScheme.onBackground,
             contentWindowInsets = contentWindowInsets
         ) { paddingValues ->
             content(paddingValues, widthClass)

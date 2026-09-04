@@ -39,6 +39,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -867,6 +868,7 @@ fun SettingsScaffold(
     
     Scaffold(
         containerColor = if (useLuxuryBackground) Color.Transparent else MaterialTheme.colorScheme.background,
+        contentColor = MaterialTheme.colorScheme.onBackground,
         topBar = {
             TopAppBar(
                 title = { 
@@ -1511,19 +1513,19 @@ fun ProviderBrandBadge(
     size: androidx.compose.ui.unit.Dp = 32.dp
 ) {
     val (bgColor, iconColor, label) = when (apiId) {
-        "mempool_space_btc" -> Triple(Color(0xFFFFF3E0), Color(0xFFF57C00), "BTC")
+        "mempool_space_btc" -> Triple(Color(0xFFFFF3E0), if (MaterialTheme.colorScheme.background.luminance() < 0.5f) Color(0xFFFBBF24) else Color(0xFFF57C00), "BTC")
         "etherscan_eth" -> Triple(Color(0xFFE8EAF6), Color(0xFF3F51B5), "ETH")
         "trongrid_tron" -> Triple(Color(0xFFFFEBEE), Color(0xFFD32F2F), "TRX")
         "google_gemini_ai" -> Triple(Color(0xFFE0F7FA), Color(0xFF00838F), "AI")
-        "openai_gpt" -> Triple(Color(0xFFE8F5E9), Color(0xFF2E7D32), "GPT")
+        "openai_gpt" -> Triple(Color(0xFFE8F5E9), if (MaterialTheme.colorScheme.background.luminance() < 0.5f) Color(0xFF4ADE80) else Color(0xFF2E7D32), "GPT")
         "deepseek_ai" -> Triple(Color(0xFFE1F5FE), Color(0xFF0288D1), "DS")
         "youcom_search_ai" -> Triple(Color(0xFFF3E5F5), Color(0xFF7B1FA2), "YOU")
         "anthropic_claude" -> Triple(Color(0xFFFFF8E1), Color(0xFFFFA000), "CLD")
         "cryptoapis_multi" -> Triple(Color(0xFFECEFF1), Color(0xFF455A64), "API")
-        "shodan_recon" -> Triple(Color(0xFFFFE0B2), Color(0xFFE65100), "SHD")
+        "shodan_recon" -> Triple(Color(0xFFFFE0B2), if (MaterialTheme.colorScheme.background.luminance() < 0.5f) Color(0xFFFB923C) else Color(0xFFE65100), "SHD")
         "abuseipdb_threat" -> Triple(Color(0xFFFFEBEE), Color(0xFFC62828), "IP")
         "virustotal_threat" -> Triple(Color(0xFFE8EAF6), Color(0xFF1A237E), "VT")
-        "numverify_phone" -> Triple(Color(0xFFE8F5E9), Color(0xFF1B5E20), "TEL")
+        "numverify_phone" -> Triple(Color(0xFFE8F5E9), if (MaterialTheme.colorScheme.background.luminance() < 0.5f) Color(0xFF4ADE80) else Color(0xFF1B5E20), "TEL")
         "blockchair_multi" -> Triple(Color(0xFFEDE7F6), Color(0xFF512DA8), "BLK")
         "misp_threat_node" -> Triple(Color(0xFFFCE4EC), Color(0xFF880E4F), "MISP")
         "hibp_identity" -> Triple(Color(0xFFE0F2F1), Color(0xFF004D40), "PWN")
@@ -1543,7 +1545,7 @@ fun ProviderBrandBadge(
                 ApiCategory.BLOCKCHAIN -> Color(0xFFEF6C00)
                 ApiCategory.THREAT_INTEL -> Color(0xFF6A1B9A)
                 ApiCategory.MARKET_DATA -> Color(0xFF1565C0)
-                ApiCategory.GEOLOCATION -> Color(0xFF2E7D32)
+                ApiCategory.GEOLOCATION -> if (MaterialTheme.colorScheme.background.luminance() < 0.5f) Color(0xFF4ADE80) else Color(0xFF2E7D32)
                 ApiCategory.OSINT_TOOLS -> Color(0xFF4527A0)
             }
             Triple(bg, iconC, category.name.take(3))
@@ -1633,12 +1635,12 @@ fun ApiConfigItemCard(
                         val (statusText, statusColor) = when (api.connectionState) {
                             ApiConnectionState.CONNECTED -> Pair(
                                 if (api.pingMs > 0) "${api.pingMs} ms • " + (if (isPersian) "متصل" else "Connected") else (if (isPersian) "متصل" else "Connected"),
-                                Color(0xFF2E7D32)
+                                if (MaterialTheme.colorScheme.background.luminance() < 0.5f) Color(0xFF4ADE80) else Color(0xFF2E7D32)
                             )
                             ApiConnectionState.TESTING -> Pair(if (isPersian) "در حال تست..." else "Testing...", Color(0xFF1976D2))
                             ApiConnectionState.INVALID_KEY -> Pair(if (isPersian) "کلید نامعتبر" else "Invalid Key", MaterialTheme.colorScheme.error)
-                            ApiConnectionState.UNAUTHORIZED -> Pair(if (isPersian) "محدودیت دسترسی" else "Forbidden", Color(0xFFE65100))
-                            ApiConnectionState.RATE_LIMITED -> Pair(if (isPersian) "محدودیت نرخ" else "Rate Limited", Color(0xFFF57C00))
+                            ApiConnectionState.UNAUTHORIZED -> Pair(if (isPersian) "محدودیت دسترسی" else "Forbidden", if (MaterialTheme.colorScheme.background.luminance() < 0.5f) Color(0xFFFB923C) else Color(0xFFE65100))
+                            ApiConnectionState.RATE_LIMITED -> Pair(if (isPersian) "محدودیت نرخ" else "Rate Limited", if (MaterialTheme.colorScheme.background.luminance() < 0.5f) Color(0xFFFBBF24) else Color(0xFFF57C00))
                             ApiConnectionState.NOT_CONFIGURED -> Pair(if (isPersian) "تنظیم نشده" else "Not Configured", MaterialTheme.colorScheme.outline)
                             else -> Pair(if (isPersian) "غیرفعال" else "Offline", MaterialTheme.colorScheme.outline)
                         }
@@ -1669,7 +1671,7 @@ fun ApiConfigItemCard(
 
                         // VPN Badge
                         val vpnTagText = if (api.requiresVpn) (if (isPersian) "نیازمند VPN" else "VPN Req") else (if (isPersian) "مستقیم" else "Direct")
-                        val vpnTagColor = if (api.requiresVpn) Color(0xFFE65100) else Color(0xFF00796B)
+                        val vpnTagColor = if (api.requiresVpn) if (MaterialTheme.colorScheme.background.luminance() < 0.5f) Color(0xFFFB923C) else Color(0xFFE65100) else Color(0xFF00796B)
                         Surface(
                             shape = RoundedCornerShape(3.dp),
                             color = vpnTagColor.copy(alpha = 0.08f)
@@ -1799,8 +1801,8 @@ fun ApiConfigItemCard(
                     val progress = (remainingPct.toFloat() / 100f).coerceIn(0f, 1f)
                     val barColor = when {
                         remainingPct < 15 -> MaterialTheme.colorScheme.error
-                        remainingPct < 40 -> Color(0xFFF57C00)
-                        else -> Color(0xFF2E7D32)
+                        remainingPct < 40 -> if (MaterialTheme.colorScheme.background.luminance() < 0.5f) Color(0xFFFBBF24) else Color(0xFFF57C00)
+                        else -> if (MaterialTheme.colorScheme.background.luminance() < 0.5f) Color(0xFF4ADE80) else Color(0xFF2E7D32)
                     }
 
                     Row(
@@ -1972,7 +1974,7 @@ fun ApiValidationDiagnosticsDialog(
                                     Icon(
                                         Icons.Default.CheckCircle,
                                         contentDescription = "Passed",
-                                        tint = Color(0xFF2E7D32),
+                                        tint = if (MaterialTheme.colorScheme.background.luminance() < 0.5f) Color(0xFF4ADE80) else Color(0xFF2E7D32),
                                         modifier = Modifier.size(20.dp)
                                     )
                                 }
@@ -2093,7 +2095,7 @@ fun ApiValidationDiagnosticsDialog(
                                     text = if (diagnosticResult.requiresVpn) (if (isPersian) "بله (تحریم منطقه‌ای)" else "Yes (Region Restricted)") else (if (isPersian) "خیر (دسترسی مستقیم)" else "No (Direct Access)"),
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = if (diagnosticResult.requiresVpn) Color(0xFFE65100) else Color(0xFF2E7D32)
+                                    color = if (diagnosticResult.requiresVpn) if (MaterialTheme.colorScheme.background.luminance() < 0.5f) Color(0xFFFB923C) else Color(0xFFE65100) else if (MaterialTheme.colorScheme.background.luminance() < 0.5f) Color(0xFF4ADE80) else Color(0xFF2E7D32)
                                 )
                             }
 
@@ -2344,7 +2346,7 @@ fun DatabaseCatalogCard(
                 }
                 Column(modifier = Modifier.weight(1.2f)) {
                     Text(if (isPersian) "ایندکس" else "Index", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Text(if (isPersian) db.indexStatus.titleFa else db.indexStatus.titleEn, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold, color = if (db.isIndexed) Color(0xFF2E7D32) else Color(0xFFD32F2F), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(if (isPersian) db.indexStatus.titleFa else db.indexStatus.titleEn, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold, color = if (db.isIndexed) if (MaterialTheme.colorScheme.background.luminance() < 0.5f) Color(0xFF4ADE80) else Color(0xFF2E7D32) else Color(0xFFD32F2F), maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
                 Column(modifier = Modifier.weight(0.8f)) {
                     Text(if (isPersian) "نسخه" else "Version", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -2423,7 +2425,7 @@ fun DatabaseCatalogCard(
             ) {
                 Surface(
                     shape = RoundedCornerShape(4.dp),
-                    color = if (db.isInstalled) Color(0xFF1B5E20) else MaterialTheme.colorScheme.surfaceContainerHighest
+                    color = if (db.isInstalled) if (MaterialTheme.colorScheme.background.luminance() < 0.5f) Color(0xFF4ADE80) else Color(0xFF1B5E20) else MaterialTheme.colorScheme.surfaceContainerHighest
                 ) {
                     Text(
                         text = if (db.isInstalled) (if (isPersian) "نصب و فعال" else "Installed") else (if (isPersian) "آماده دانلود" else "Available"),
@@ -2530,7 +2532,7 @@ fun SecurityTab(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Phosphor3dIconBadge(icon = Icons.Default.Shield, themeColor = Color(0xFF2E7D32), size = 42.dp)
+                        Phosphor3dIconBadge(icon = Icons.Default.Shield, themeColor = if (MaterialTheme.colorScheme.background.luminance() < 0.5f) Color(0xFF4ADE80) else Color(0xFF2E7D32), size = 42.dp)
                         Column {
                             Text(
                                 text = if (isPersian) "گاوصندوق سخت‌افزاری Android KeyStore" else "Hardware Android KeyStore Vault",
@@ -2564,7 +2566,7 @@ fun SecurityTab(
                                 text = if (isDbPasswordConfigured) (if (isPersian) "فعال و رمزگذاری شده" else "Configured & Active")
                                 else (if (isPersian) "غیرفعال" else "Not Configured"),
                                 style = MaterialTheme.typography.bodySmall,
-                                color = if (isDbPasswordConfigured) Color(0xFF2E7D32) else MaterialTheme.colorScheme.error,
+                                color = if (isDbPasswordConfigured) if (MaterialTheme.colorScheme.background.luminance() < 0.5f) Color(0xFF4ADE80) else Color(0xFF2E7D32) else MaterialTheme.colorScheme.error,
                                 fontWeight = FontWeight.Bold
                             )
                         }

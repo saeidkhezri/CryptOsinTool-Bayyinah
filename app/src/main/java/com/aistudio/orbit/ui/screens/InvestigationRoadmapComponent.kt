@@ -18,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -819,14 +820,14 @@ fun GuideStageTemplate(
                     Icon(
                         imageVector = Icons.Default.FactCheck,
                         contentDescription = null,
-                        tint = Color(0xFF2E7D32),
+                        tint = if (MaterialTheme.colorScheme.background.luminance() < 0.5f) Color(0xFF4ADE80) else Color(0xFF2E7D32),
                         modifier = Modifier.size(16.dp)
                     )
                     Text(
                         text = "${strings.evidenceCollected} (${case.evidenceLog.size})",
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFF2E7D32)
+                        color = if (MaterialTheme.colorScheme.background.luminance() < 0.5f) Color(0xFF4ADE80) else Color(0xFF2E7D32)
                     )
                 }
 
@@ -878,14 +879,14 @@ fun GuideStageTemplate(
                     Icon(
                         imageVector = Icons.Default.Lightbulb,
                         contentDescription = null,
-                        tint = Color(0xFFFFA000),
+                        tint = if (MaterialTheme.colorScheme.background.luminance() < 0.5f) Color(0xFFFBBF24) else Color(0xFFFFA000),
                         modifier = Modifier.size(16.dp)
                     )
                     Text(
                         text = strings.whatThisMeans,
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFFE65100)
+                        color = if (MaterialTheme.colorScheme.background.luminance() < 0.5f) Color(0xFFFB923C) else Color(0xFFE65100)
                     )
                 }
                 Text(
