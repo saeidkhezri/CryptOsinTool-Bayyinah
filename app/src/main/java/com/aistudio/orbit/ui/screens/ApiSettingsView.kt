@@ -51,6 +51,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.aistudio.orbit.forensics.audit.AuditTrailService
 import com.aistudio.orbit.localization.AppLocalization
+import com.aistudio.orbit.localization.toPersianDigits
 import com.aistudio.orbit.model.*
 import com.aistudio.orbit.repository.AppLanguage
 import com.aistudio.orbit.ui.InvestigationViewModel
@@ -1360,7 +1361,7 @@ fun ApisAndIntegrationsTab(
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            text = if (isPersian) "${apiConfigs.count { it.apiKey.isNotBlank() || (it.isFree && !it.requiresKey) }} از ${apiConfigs.size} سرویس فعال و آماده است"
+                            text = if (isPersian) "${apiConfigs.count { it.apiKey.isNotBlank() || (it.isFree && !it.requiresKey) }.toPersianDigits(true)} از ${apiConfigs.size.toPersianDigits(true)} سرویس فعال و آماده است"
                             else "${apiConfigs.count { it.apiKey.isNotBlank() || (it.isFree && !it.requiresKey) }} of ${apiConfigs.size} integrations active",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -1390,24 +1391,102 @@ fun ApisAndIntegrationsTab(
             }
         }
 
-        // Category Filter Chips
+        // Category Filter Chips (Collapsible Drawer)
         item {
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp)
+            var isCategoryExpanded by remember { mutableStateOf(false) }
+            val activeCategoryName = selectedCategory?.let { if (isPersian) it.titleFa else it.titleEn } ?: (if (isPersian) "تمام سرویس‌ها" else "All Integrations")
+            val activeCategoryCount = if (selectedCategory == null) apiConfigs.size else apiConfigs.count { it.category == selectedCategory }
+
+            Card(
+                shape = RoundedCornerShape(14.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+                modifier = Modifier.fillMaxWidth()
             ) {
-                FilterChip(
-                    selected = selectedCategory == null,
-                    onClick = { onCategorySelect(null) },
-                    label = { Text(if (isPersian) "همه (${apiConfigs.size})" else "All (${apiConfigs.size})", fontSize = 12.sp) }
-                )
-                ApiCategory.values().forEach { cat ->
-                    val count = apiConfigs.count { it.category == cat }
-                    FilterChip(
-                        selected = selectedCategory == cat,
-                        onClick = { onCategorySelect(cat) },
-                        label = { Text("${if (isPersian) cat.titleFa else cat.titleEn} ($count)", fontSize = 12.sp) }
-                    )
+                Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { isCategoryExpanded = !isCategoryExpanded },
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.FilterList,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Text(
+                                text = if (isPersian) "دسته‌بندی سرویس‌ها و ماژول‌ها" else "API Service Categories",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f)
+                            ) {
+                                Text(
+                                    text = "$activeCategoryName (${activeCategoryCount.toPersianDigits(isPersian)})",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                )
+                            }
+                            Icon(
+                                imageVector = if (isCategoryExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    AnimatedVisibility(visible = isCategoryExpanded) {
+                        Column(modifier = Modifier.padding(top = 4.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                            FlowRow(
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                verticalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                val allSelected = selectedCategory == null
+                                FilterChip(
+                                    selected = allSelected,
+                                    onClick = { onCategorySelect(null) },
+                                    label = {
+                                        Text(
+                                            if (isPersian) "همه (${apiConfigs.size.toPersianDigits(true)})"
+                                            else "All (${apiConfigs.size})",
+                                            fontSize = 12.sp,
+                                            fontWeight = if (allSelected) FontWeight.Bold else FontWeight.Normal
+                                        )
+                                    }
+                                )
+                                ApiCategory.values().forEach { cat ->
+                                    val count = apiConfigs.count { it.category == cat }
+                                    val isCatSelected = selectedCategory == cat
+                                    FilterChip(
+                                        selected = isCatSelected,
+                                        onClick = { onCategorySelect(cat) },
+                                        label = {
+                                            Text(
+                                                "${if (isPersian) cat.titleFa else cat.titleEn} (${count.toPersianDigits(isPersian)})",
+                                                fontSize = 12.sp,
+                                                fontWeight = if (isCatSelected) FontWeight.Bold else FontWeight.Normal
+                                            )
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }

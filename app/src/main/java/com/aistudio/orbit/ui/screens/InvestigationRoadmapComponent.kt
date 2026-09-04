@@ -44,6 +44,8 @@ import com.aistudio.orbit.forensics.learning.MiniLessonTopic
 import com.aistudio.orbit.repository.AppLanguage
 import com.aistudio.orbit.localization.AppLocalization
 
+import com.aistudio.orbit.localization.toPersianDigits
+
 enum class StageStatus(val displayNameFa: String, val displayNameEn: String, val color: Color) {
     COMPLETED("تکمیل شده", "Completed", Color(0xFF10B981)), // Emerald Green
     CURRENT("در حال انجام", "Current", Color(0xFF00E5FF)), // Electric Cyan
@@ -113,7 +115,7 @@ fun CollapsibleRoadmapHeader(
                         maxLines = 1, overflow = TextOverflow.Ellipsis
                     )
                     Text(
-                        text = "${currentStage.id} / ${stages.size} • ${if (isPersian) currentStage.titleFa else currentStage.titleEn}",
+                        text = "${currentStage.id.toPersianDigits(isPersian)} / ${stages.size.toPersianDigits(isPersian)} • ${if (isPersian) currentStage.titleFa else currentStage.titleEn}",
                         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1, overflow = TextOverflow.Ellipsis
                     )

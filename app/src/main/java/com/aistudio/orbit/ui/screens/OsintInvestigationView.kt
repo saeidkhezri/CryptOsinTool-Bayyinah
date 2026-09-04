@@ -38,6 +38,7 @@ import androidx.compose.ui.unit.sp
 import com.aistudio.orbit.PdfReportExporter
 import com.aistudio.orbit.forensics.osint.ForensicToolController
 import com.aistudio.orbit.forensics.osint.InvestigationPipelineEngine
+import com.aistudio.orbit.localization.toPersianDigits
 import com.aistudio.orbit.model.*
 import com.aistudio.orbit.provider.osint.ProviderHealthStatus
 import com.aistudio.orbit.repository.AppLanguage
@@ -241,28 +242,28 @@ fun OsintInvestigationView(
                                 ) {
                                     ForensicMetricCard(
                                         label = if (isFa) "سرنخ‌های فعال" else "Seeds",
-                                        value = "${osintSeeds.size.coerceAtLeast(1)}",
+                                        value = osintSeeds.size.toPersianDigits(isFa),
                                         icon = Icons.Default.ScatterPlot,
                                         accentColor = MaterialTheme.colorScheme.primary,
                                         modifier = Modifier.weight(1f)
                                     )
                                     ForensicMetricCard(
                                         label = if (isFa) "ادله مستند" else "Evidence",
-                                        value = "${session?.collectedEvidence?.size ?: 0}",
+                                        value = (session?.collectedEvidence?.size ?: 0).toPersianDigits(isFa),
                                         icon = Icons.Default.FactCheck,
                                         accentColor = Color(0xFF00897B),
                                         modifier = Modifier.weight(1f)
                                     )
                                     ForensicMetricCard(
                                         label = if (isFa) "موجودیت‌ها" else "Entities",
-                                        value = "${session?.extractedEntities?.size ?: 0}",
+                                        value = (session?.extractedEntities?.size ?: 0).toPersianDigits(isFa),
                                         icon = Icons.Default.Groups,
                                         accentColor = Color(0xFF5E35B1),
                                         modifier = Modifier.weight(1f)
                                     )
                                     ForensicMetricCard(
                                         label = if (isFa) "تعارضات" else "Conflicts",
-                                        value = "${session?.conflicts?.size ?: 0}",
+                                        value = (session?.conflicts?.size ?: 0).toPersianDigits(isFa),
                                         icon = Icons.Default.WarningAmber,
                                         accentColor = if ((session?.conflicts?.size ?: 0) > 0) MaterialTheme.colorScheme.error else Color(0xFF757575),
                                         modifier = Modifier.weight(1f)
@@ -276,14 +277,14 @@ fun OsintInvestigationView(
                                     ) {
                                         ForensicMetricCard(
                                             label = if (isFa) "سرنخ‌های فعال" else "Seeds",
-                                            value = "${osintSeeds.size.coerceAtLeast(1)}",
+                                            value = osintSeeds.size.toPersianDigits(isFa),
                                             icon = Icons.Default.ScatterPlot,
                                             accentColor = MaterialTheme.colorScheme.primary,
                                             modifier = Modifier.weight(1f)
                                         )
                                         ForensicMetricCard(
                                             label = if (isFa) "ادله مستند" else "Evidence",
-                                            value = "${session?.collectedEvidence?.size ?: 0}",
+                                            value = (session?.collectedEvidence?.size ?: 0).toPersianDigits(isFa),
                                             icon = Icons.Default.FactCheck,
                                             accentColor = Color(0xFF00897B),
                                             modifier = Modifier.weight(1f)
@@ -295,14 +296,14 @@ fun OsintInvestigationView(
                                     ) {
                                         ForensicMetricCard(
                                             label = if (isFa) "موجودیت‌ها" else "Entities",
-                                            value = "${session?.extractedEntities?.size ?: 0}",
+                                            value = (session?.extractedEntities?.size ?: 0).toPersianDigits(isFa),
                                             icon = Icons.Default.Groups,
                                             accentColor = Color(0xFF5E35B1),
                                             modifier = Modifier.weight(1f)
                                         )
                                         ForensicMetricCard(
                                             label = if (isFa) "تعارضات" else "Conflicts",
-                                            value = "${session?.conflicts?.size ?: 0}",
+                                            value = (session?.conflicts?.size ?: 0).toPersianDigits(isFa),
                                             icon = Icons.Default.WarningAmber,
                                             accentColor = if ((session?.conflicts?.size ?: 0) > 0) MaterialTheme.colorScheme.error else Color(0xFF757575),
                                             modifier = Modifier.weight(1f)

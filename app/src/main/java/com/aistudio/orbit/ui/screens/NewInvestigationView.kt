@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.aistudio.orbit.forensics.AddressValidator
@@ -57,6 +58,14 @@ fun NewInvestigationView(
     var queryLimit by remember { mutableIntStateOf(50) }
     var searchDepth by remember { mutableIntStateOf(1) }
     var selectedMode by remember { mutableStateOf(com.aistudio.orbit.model.ExperienceMode.GUIDED_INVESTIGATION) }
+
+    // Collapsible Drawers & Custom Numeric Controls
+    var isTimeframeExpanded by remember { mutableStateOf(false) }
+    var isQueryConfigExpanded by remember { mutableStateOf(true) }
+    var isCustomLimitMode by remember { mutableStateOf(false) }
+    var customLimitText by remember { mutableStateOf("50") }
+    var isCustomDepthMode by remember { mutableStateOf(false) }
+    var customDepthText by remember { mutableStateOf("1") }
 
     // Date Range Selection State
     var dateRangeType by remember { mutableStateOf(InvestigationDateRangeType.ENTIRE_HISTORY) }
@@ -298,7 +307,7 @@ fun NewInvestigationView(
                 }
             }
 
-            // Investigation Date Range Configuration
+            // Investigation Date Range Configuration (Collapsible)
             item {
                 Card(
                     shape = RoundedCornerShape(16.dp),
@@ -306,78 +315,128 @@ fun NewInvestigationView(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Text(
-                            text = if (isPersian) "بازه زمانی جرم‌یابی و جستجو در دفترکل" else "Ledger Investigation Timeframe",
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold
-                        )
-
-                        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            items(InvestigationDateRangeType.entries.toTypedArray()) { rType ->
-                                val isSelected = dateRangeType == rType
-                                FilterChip(
-                                    selected = isSelected,
-                                    onClick = { dateRangeType = rType },
-                                    label = { Text(if (isPersian) rType.labelFa else rType.labelEn, fontSize = 12.sp) }
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { isTimeframeExpanded = !isTimeframeExpanded },
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.DateRange,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Text(
+                                    text = if (isPersian) "بازه زمانی جرم‌یابی و جستجو در دفترکل" else "Ledger Investigation Timeframe",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
+                                ) {
+                                    Text(
+                                        text = if (isPersian) dateRangeType.labelFa else dateRangeType.labelEn,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                                Icon(
+                                    imageVector = if (isTimeframeExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                         }
 
-                        if (dateRangeType == InvestigationDateRangeType.CUSTOM_RANGE) {
-                            BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-                                val isNarrow = maxWidth < 380.dp
-                                if (isNarrow) {
-                                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        OutlinedTextField(
-                                            value = startDateText,
-                                            onValueChange = { startDateText = it },
-                                            label = { Text(if (isPersian) "تاریخ شروع (YYYY-MM-DD)" else "Start Date") },
-                                            modifier = Modifier.fillMaxWidth(),
-                                            singleLine = true,
-                                            shape = RoundedCornerShape(10.dp)
-                                        )
-                                        OutlinedTextField(
-                                            value = endDateText,
-                                            onValueChange = { endDateText = it },
-                                            label = { Text(if (isPersian) "تاریخ پایان (YYYY-MM-DD)" else "End Date") },
-                                            modifier = Modifier.fillMaxWidth(),
-                                            singleLine = true,
-                                            shape = RoundedCornerShape(10.dp)
-                                        )
-                                    }
-                                } else {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                                    ) {
-                                        OutlinedTextField(
-                                            value = startDateText,
-                                            onValueChange = { startDateText = it },
-                                            label = { Text(if (isPersian) "تاریخ شروع (YYYY-MM-DD)" else "Start Date") },
-                                            modifier = Modifier.weight(1f),
-                                            singleLine = true,
-                                            shape = RoundedCornerShape(10.dp)
-                                        )
-                                        OutlinedTextField(
-                                            value = endDateText,
-                                            onValueChange = { endDateText = it },
-                                            label = { Text(if (isPersian) "تاریخ پایان (YYYY-MM-DD)" else "End Date") },
-                                            modifier = Modifier.weight(1f),
-                                            singleLine = true,
-                                            shape = RoundedCornerShape(10.dp)
+                        AnimatedVisibility(visible = isTimeframeExpanded) {
+                            Column(
+                                modifier = Modifier.padding(top = 8.dp),
+                                verticalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    items(InvestigationDateRangeType.entries.toTypedArray()) { rType ->
+                                        val isSelected = dateRangeType == rType
+                                        FilterChip(
+                                            selected = isSelected,
+                                            onClick = { dateRangeType = rType },
+                                            label = { Text(if (isPersian) rType.labelFa else rType.labelEn, fontSize = 12.sp) }
                                         )
                                     }
                                 }
+
+                                if (dateRangeType == InvestigationDateRangeType.CUSTOM_RANGE) {
+                                    BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                                        val isNarrow = maxWidth < 380.dp
+                                        if (isNarrow) {
+                                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                                OutlinedTextField(
+                                                    value = startDateText,
+                                                    onValueChange = { startDateText = it },
+                                                    label = { Text(if (isPersian) "تاریخ شروع (YYYY-MM-DD)" else "Start Date") },
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    singleLine = true,
+                                                    shape = RoundedCornerShape(10.dp)
+                                                )
+                                                OutlinedTextField(
+                                                    value = endDateText,
+                                                    onValueChange = { endDateText = it },
+                                                    label = { Text(if (isPersian) "تاریخ پایان (YYYY-MM-DD)" else "End Date") },
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    singleLine = true,
+                                                    shape = RoundedCornerShape(10.dp)
+                                                )
+                                            }
+                                        } else {
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                            ) {
+                                                OutlinedTextField(
+                                                    value = startDateText,
+                                                    onValueChange = { startDateText = it },
+                                                    label = { Text(if (isPersian) "تاریخ شروع (YYYY-MM-DD)" else "Start Date") },
+                                                    modifier = Modifier.weight(1f),
+                                                    singleLine = true,
+                                                    shape = RoundedCornerShape(10.dp)
+                                                )
+                                                OutlinedTextField(
+                                                    value = endDateText,
+                                                    onValueChange = { endDateText = it },
+                                                    label = { Text(if (isPersian) "تاریخ پایان (YYYY-MM-DD)" else "End Date") },
+                                                    modifier = Modifier.weight(1f),
+                                                    singleLine = true,
+                                                    shape = RoundedCornerShape(10.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+                                } else if (dateRangeType == InvestigationDateRangeType.SPECIFIC_YEAR) {
+                                    OutlinedTextField(
+                                        value = selectedYearText,
+                                        onValueChange = { selectedYearText = it },
+                                        label = { Text(if (isPersian) "سال میلادی (مثلاً: 2024)" else "Target Year (e.g. 2024)") },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        singleLine = true,
+                                        shape = RoundedCornerShape(10.dp)
+                                    )
+                                }
                             }
-                        } else if (dateRangeType == InvestigationDateRangeType.SPECIFIC_YEAR) {
-                            OutlinedTextField(
-                                value = selectedYearText,
-                                onValueChange = { selectedYearText = it },
-                                label = { Text(if (isPersian) "سال میلادی (مثلاً: 2024)" else "Target Year (e.g. 2024)") },
-                                modifier = Modifier.fillMaxWidth(),
-                                singleLine = true,
-                                shape = RoundedCornerShape(10.dp)
-                            )
                         }
                     }
                 }
@@ -448,7 +507,7 @@ fun NewInvestigationView(
                 )
             }
 
-            // Query Limit and Depth Configuration
+            // Query Limit and Depth Configuration (Collapsible & Custom Numeric)
             item {
                 Card(
                     shape = RoundedCornerShape(16.dp),
@@ -456,43 +515,196 @@ fun NewInvestigationView(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Text(
-                            text = if (isPersian) "تنظیمات واکشی تراکنش‌ها و محدودیت‌ها" else "Transaction Query Depth & Limits",
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            val limitText = if (queryLimit >= 10000) {
-                                if (isPersian) "نامحدود" else "No Limit"
-                            } else {
-                                queryLimit.toPersianDigits(isPersian)
-                            }
-                            Text(
-                                text = "${if (isPersian) "سقف تعداد تراکنش اولیه: " else "Initial Tx Query Cap: "} $limitText",
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                            FlowRow(
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                verticalArrangement = Arrangement.spacedBy(6.dp)
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { isQueryConfigExpanded = !isQueryConfigExpanded },
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                listOf(25, 50, 100, 200, 10000).forEach { cap ->
-                                    FilterChip(
-                                        selected = queryLimit == cap,
-                                        onClick = { queryLimit = cap },
-                                        label = {
-                                            Text(
-                                                text = if (cap >= 10000) {
-                                                    if (isPersian) "نامحدود" else "No Limit"
-                                                } else {
-                                                    cap.toPersianDigits(isPersian)
+                                Icon(
+                                    imageVector = Icons.Default.Tune,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Text(
+                                    text = if (isPersian) "تنظیمات واکشی تراکنش‌ها و لایه‌ها" else "Query Depth & Transaction Limits",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                val currentLimitBadge = if (queryLimit >= 10000) (if (isPersian) "نامحدود" else "Unlimited") else "${queryLimit.toPersianDigits(isPersian)} تراکنش"
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.7f)
+                                ) {
+                                    Text(
+                                        text = "$currentLimitBadge • لایه ${searchDepth.toPersianDigits(isPersian)}",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                    )
+                                }
+                                Icon(
+                                    imageVector = if (isQueryConfigExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+
+                        AnimatedVisibility(visible = isQueryConfigExpanded) {
+                            Column(
+                                modifier = Modifier.padding(top = 8.dp),
+                                verticalArrangement = Arrangement.spacedBy(14.dp)
+                            ) {
+                                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+                                // Transaction Cap Selection
+                                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    val limitText = if (queryLimit >= 10000) {
+                                        if (isPersian) "نامحدود (واکشی تمام صفحات دفترکل)" else "Unlimited (All Ledger Pages)"
+                                    } else {
+                                        "${queryLimit.toPersianDigits(isPersian)} تراکنش"
+                                    }
+                                    Text(
+                                        text = "${if (isPersian) "سقف تعداد تراکنش: " else "Transaction Query Cap: "} $limitText",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                    FlowRow(
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        listOf(25, 50, 100, 250, 500, 1000, 10000).forEach { cap ->
+                                            val isCapSelected = !isCustomLimitMode && queryLimit == cap
+                                            FilterChip(
+                                                selected = isCapSelected,
+                                                onClick = {
+                                                    isCustomLimitMode = false
+                                                    queryLimit = cap
                                                 },
-                                                fontSize = 12.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                modifier = Modifier.padding(horizontal = 4.dp)
+                                                label = {
+                                                    Text(
+                                                        text = if (cap >= 10000) {
+                                                            if (isPersian) "نامحدود" else "No Limit"
+                                                        } else {
+                                                            cap.toPersianDigits(isPersian)
+                                                        },
+                                                        fontSize = 12.sp,
+                                                        fontWeight = if (isCapSelected) FontWeight.Bold else FontWeight.Normal,
+                                                        modifier = Modifier.padding(horizontal = 4.dp)
+                                                    )
+                                                }
                                             )
                                         }
+                                        FilterChip(
+                                            selected = isCustomLimitMode,
+                                            onClick = {
+                                                isCustomLimitMode = true
+                                                customLimitText.toIntOrNull()?.let { queryLimit = it }
+                                            },
+                                            label = {
+                                                Text(
+                                                    text = if (isPersian) "سفارشی..." else "Custom...",
+                                                    fontSize = 12.sp,
+                                                    fontWeight = if (isCustomLimitMode) FontWeight.Bold else FontWeight.Normal
+                                                )
+                                            }
+                                        )
+                                    }
+
+                                    if (isCustomLimitMode) {
+                                        OutlinedTextField(
+                                            value = customLimitText,
+                                            onValueChange = { input ->
+                                                val clean = input.filter { it.isDigit() }
+                                                customLimitText = clean
+                                                clean.toIntOrNull()?.let { queryLimit = it.coerceIn(1, 100000) }
+                                            },
+                                            label = { Text(if (isPersian) "تعداد دقیق تراکنش مدنظر" else "Exact Transaction Count") },
+                                            placeholder = { Text("مثلاً: 350") },
+                                            modifier = Modifier.fillMaxWidth(),
+                                            singleLine = true,
+                                            shape = RoundedCornerShape(10.dp)
+                                        )
+                                    }
+                                }
+
+                                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+
+                                // Investigation Depth / Layers Selection
+                                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Text(
+                                        text = "${if (isPersian) "عمق لایه‌ها و گام‌های جستجو: " else "Investigation Layer Depth: "} لایه ${searchDepth.toPersianDigits(isPersian)}",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.SemiBold
                                     )
+                                    FlowRow(
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        listOf(
+                                            1 to (if (isPersian) "لایه ۱ (مستقیم / Direct)" else "Layer 1 (Direct)"),
+                                            2 to (if (isPersian) "لایه ۲ (دو گام / 2-Hops)" else "Layer 2 (2-Hops)"),
+                                            3 to (if (isPersian) "لایه ۳ (سه گام / 3-Hops)" else "Layer 3 (3-Hops)")
+                                        ).forEach { (depthVal, label) ->
+                                            val isDepthSelected = !isCustomDepthMode && searchDepth == depthVal
+                                            FilterChip(
+                                                selected = isDepthSelected,
+                                                onClick = {
+                                                    isCustomDepthMode = false
+                                                    searchDepth = depthVal
+                                                },
+                                                label = {
+                                                    Text(
+                                                        text = label,
+                                                        fontSize = 12.sp,
+                                                        fontWeight = if (isDepthSelected) FontWeight.Bold else FontWeight.Normal
+                                                    )
+                                                }
+                                            )
+                                        }
+                                        FilterChip(
+                                            selected = isCustomDepthMode,
+                                            onClick = {
+                                                isCustomDepthMode = true
+                                                customDepthText.toIntOrNull()?.let { searchDepth = it }
+                                            },
+                                            label = {
+                                                Text(
+                                                    text = if (isPersian) "لایه سفارشی..." else "Custom Layer...",
+                                                    fontSize = 12.sp,
+                                                    fontWeight = if (isCustomDepthMode) FontWeight.Bold else FontWeight.Normal
+                                                )
+                                            }
+                                        )
+                                    }
+
+                                    if (isCustomDepthMode) {
+                                        OutlinedTextField(
+                                            value = customDepthText,
+                                            onValueChange = { input ->
+                                                val clean = input.filter { it.isDigit() }
+                                                customDepthText = clean
+                                                clean.toIntOrNull()?.let { searchDepth = it.coerceIn(1, 10) }
+                                            },
+                                            label = { Text(if (isPersian) "عدد لایه بررسی (مثلاً ۴)" else "Layer Depth Number") },
+                                            placeholder = { Text("مثلاً: 4") },
+                                            modifier = Modifier.fillMaxWidth(),
+                                            singleLine = true,
+                                            shape = RoundedCornerShape(10.dp)
+                                        )
+                                    }
                                 }
                             }
                         }

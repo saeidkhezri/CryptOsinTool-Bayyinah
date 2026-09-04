@@ -537,6 +537,24 @@ class MainActivity : ComponentActivity() {
                             )
                         }
 
+                        // Floating Background Badge when operation is running in background
+                        if (progressState.isRunning && progressState.isBackgrounded) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(bottom = if (showBottomBar) 80.dp else 16.dp, end = 16.dp),
+                                contentAlignment = Alignment.BottomEnd
+                            ) {
+                                com.aistudio.orbit.ui.components.ForensicFloatingBackgroundBadge(
+                                    state = progressState,
+                                    onRestore = {
+                                        investigationViewModel.restoreOperationToForeground()
+                                    },
+                                    isPersian = isPersian
+                                )
+                            }
+                        }
+
                         // Global Search Dialog
                         if (showGlobalSearch) {
                             GlobalSearchComponent(

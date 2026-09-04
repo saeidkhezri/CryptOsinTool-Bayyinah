@@ -267,7 +267,7 @@ fun ForensicOperationProgressDialog(
                             modifier = Modifier.weight(1f)
                         )
                         Text(
-                            text = "${(progressVal * 100).toInt()}%",
+                            text = "${(progressVal * 100).toInt()}%".toPersianDigits(isPersian),
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary
@@ -584,14 +584,105 @@ private fun PhosphorLedBadge(
             )
             Text(
                 text = if (led.isLocal) {
-                    if (isPersian) "محلی / رمزنگاری Room" else "Local / Room DB"
+                    if (isPersian) "محلی / پایگاه Room" else "Local / Room DB"
                 } else {
-                    if (led.pingMs != null) "${if (isPersian) "برخط" else "Online"} • ${led.pingMs}ms" else if (isPersian) "متصل" else "Connected"
+                    if (led.pingMs != null) {
+                        val pingStr = "${led.pingMs}".toPersianDigits(isPersian)
+                        "${if (isPersian) "برخط" else "Online"} • $pingStr ms"
+                    } else if (isPersian) "متصل" else "Connected"
                 },
                 style = MaterialTheme.typography.labelSmall,
                 fontSize = 9.sp,
                 color = ledColor.copy(alpha = 0.9f)
             )
+        }
+    }
+}
+
+@Composable
+fun ForensicFloatingBackgroundBadge(
+    state: ForensicProgressState,
+    onRestore: () -> Unit,
+    modifier: Modifier = Modifier,
+    isPersian: Boolean = true
+) {
+    if (!state.isRunning || !state.isBackgrounded) return
+
+    val infiniteTransition = rememberInfiniteTransition(label = "pulseBadge")
+    val rotation by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2500, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "rotationBadge"
+    )
+
+    val progressVal = (state.progress ?: 0.35f).coerceIn(0f, 1f)
+    val pctStr = "${(progressVal * 100).toInt()}%".toPersianDigits(isPersian)
+    val layerStr = if (isPersian) "لایه ${state.currentLayer.toString().toPersianDigits(isPersian)}" else "L${state.currentLayer}"
+
+    Surface(
+        onClick = onRestore,
+        modifier = modifier
+            .padding(16.dp)
+            .clip(RoundedCornerShape(24.dp))
+            .border(1.5.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(24.dp)),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.95f),
+        shadowElevation = 8.dp,
+        tonalElevation = 6.dp
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(28.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Sync,
+                    contentDescription = "Background Task Active",
+                    modifier = Modifier
+                        .size(18.dp)
+                        .rotate(rotation),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            }
+
+            Column {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text(
+                        text = if (isPersian) "واکشی فارنزیک در پس‌زمینه" else "Forensic Pipeline Running",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "• $layerStr",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                Text(
+                    text = "${state.operationTitle.ifBlank { if (isPersian) "در حال پردازش..." else "Processing..." }} ($pctStr)",
+                    style = MaterialTheme.typography.bodySmall,
+                    fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
         }
     }
 }
