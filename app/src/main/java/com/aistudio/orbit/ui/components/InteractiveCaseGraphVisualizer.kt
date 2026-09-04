@@ -543,7 +543,7 @@ private fun TopForensicFilterBar(
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     Icon(Icons.Default.Hub, contentDescription = null, tint = Color(0xFF00E5FF), modifier = Modifier.size(16.dp))
                     Text(
-                        text = if (isPersian) "گراف ارتباطات فارنزیک (GraphSense + Maltego)" else "Forensic Link-Analysis Graph",
+                        text = if (isPersian) "گراف ارتباطات فارنزیک و تحلیل پیوند" else "Forensic Link-Analysis Graph",
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Bold,
                         color = Color.White

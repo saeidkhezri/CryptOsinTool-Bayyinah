@@ -4,7 +4,7 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 enum class UserRole(val displayNameEn: String, val displayNameFa: String) {
-    ADMINISTRATOR("Administrator (Full Access)", "مدیر ارشد سامانه (دسترسی کامل)"),
+    ADMINISTRATOR("Administrator (Full Access)", "مدیر سامانه (دسترسی کامل)"),
     LEAD_INVESTIGATOR("Lead Forensic Investigator", "سرپرست جرم‌یابی و تحلیل ادله"),
     ANALYST("Financial Crime Analyst", "تحلیل‌گر جرائم مالی و تراکنش‌ها"),
     AUDITOR("Compliance & Audit Officer", "ناظر انطباق و ممیزی ادله")

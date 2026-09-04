@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
 /**
@@ -18,6 +19,7 @@ fun AdaptiveScaffold(
     topBar: @Composable () -> Unit = {},
     bottomBar: @Composable () -> Unit = {},
     floatingActionButton: @Composable () -> Unit = {},
+    containerColor: Color = MaterialTheme.colorScheme.background,
     contentWindowInsets: WindowInsets = WindowInsets(0, 0, 0, 0),
     content: @Composable (PaddingValues, WindowWidthSizeClass) -> Unit
 ) {
@@ -32,7 +34,7 @@ fun AdaptiveScaffold(
             topBar = topBar,
             bottomBar = bottomBar,
             floatingActionButton = floatingActionButton,
-            containerColor = MaterialTheme.colorScheme.background,
+            containerColor = containerColor,
             contentWindowInsets = contentWindowInsets
         ) { paddingValues ->
             content(paddingValues, widthClass)

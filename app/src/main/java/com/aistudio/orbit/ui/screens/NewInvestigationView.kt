@@ -74,16 +74,16 @@ fun NewInvestigationView(
         targetAddress.trim().startsWith("0x", ignoreCase = true) && targetAddress.trim().length == 42
     }
 
-    Box(
+    BoxWithConstraints(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.TopCenter
     ) {
         LazyColumn(
             modifier = Modifier
                 .fillMaxHeight()
-                .widthIn(max = 960.dp)
+                .widthIn(max = 880.dp)
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(horizontal = if (maxWidth < 600.dp) 12.dp else 20.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // Section Header
@@ -538,7 +538,7 @@ fun NewInvestigationView(
                             )
                         } else {
                             Text(
-                                text = if (isPersian) "بررسی سریع (Quick Check)" else "Quick Check",
+                                text = if (isPersian) "بررسی سریع" else "Quick Check",
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold,
                                 textAlign = TextAlign.Center

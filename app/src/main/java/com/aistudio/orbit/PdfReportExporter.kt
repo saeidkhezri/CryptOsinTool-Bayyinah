@@ -76,7 +76,7 @@ object PdfReportExporter {
 
         // Section 2: Observed On-Chain Ledger Facts
         if (options.includeLedgerFacts) {
-            y1 = drawSectionHeader(canvas1, paint, if (isFa) "۲. حقایق قطعی و عینی داده بلاکچین (On-Chain Facts)" else "2. DIRECTLY OBSERVED LEDGER FACTS", y1, isFa, Color.parseColor("#166534"))
+            y1 = drawSectionHeader(canvas1, paint, if (isFa) "۲. حقایق قطعی و عینی داده بلاکچین" else "2. DIRECTLY OBSERVED LEDGER FACTS", y1, isFa, Color.parseColor("#166534"))
             
             paint.color = Color.parseColor("#F0FDF4")
             canvas1.drawRoundRect(RectF(30f, y1, 565f, y1 + 80f), 6f, 6f, paint)
@@ -98,7 +98,7 @@ object PdfReportExporter {
         }
 
         // Section 3: Risk Assessment & AML Indicators
-        y1 = drawSectionHeader(canvas1, paint, if (isFa) "۳. ارزیابی ریسک و الگوهای پولشویی (AML & Threat Typologies)" else "3. AML TYPOLOGY & RISK ASSESSMENT", y1, isFa, Color.parseColor("#991B1B"))
+        y1 = drawSectionHeader(canvas1, paint, if (isFa) "۳. ارزیابی ریسک و الگوهای پولشویی" else "3. AML TYPOLOGY & RISK ASSESSMENT", y1, isFa, Color.parseColor("#991B1B"))
         
         paint.color = Color.parseColor("#FEF2F2")
         canvas1.drawRoundRect(RectF(30f, y1, 565f, y1 + 115f), 6f, 6f, paint)
@@ -185,7 +185,7 @@ object PdfReportExporter {
         val canvas2 = page2.canvas
 
         drawPageFrame(canvas2, paint, isFa, 2, if (options.hasAnyLegalSection) 4 else 3)
-        drawSubHeader(canvas2, paint, if (isFa) "نمودار توپولوژی گراف و خوشه‌های ارتباطی (Link Analysis)" else "TOPOLOGY GRAPH & CLUSTERS LINK ANALYSIS", isFa)
+        drawSubHeader(canvas2, paint, if (isFa) "نمودار توپولوژی گراف و خوشه‌های ارتباطی" else "TOPOLOGY GRAPH & CLUSTERS LINK ANALYSIS", isFa)
 
         var y2 = 80f
 
@@ -203,7 +203,7 @@ object PdfReportExporter {
         }
 
         // Graph Entities & Cluster Summary Table
-        y2 = drawSectionHeader(canvas2, paint, if (isFa) "موجودیت‌های شناسایی‌شده در گراف (GraphSense & OSINT Nodes)" else "DISCOVERED GRAPH NODES & ENTITY ATTRIBUTIONS", y2, isFa, Color.parseColor("#0F2042"))
+        y2 = drawSectionHeader(canvas2, paint, if (isFa) "موجودیت‌های شناسایی‌شده در گراف" else "DISCOVERED GRAPH NODES & ENTITY ATTRIBUTIONS", y2, isFa, Color.parseColor("#0F2042"))
 
         // Table Header
         paint.color = Color.parseColor("#0F2042")
@@ -313,7 +313,7 @@ object PdfReportExporter {
         var y3 = 80f
 
         // Table of Transactions
-        y3 = drawSectionHeader(canvas3, paint, if (isFa) "فهرست تراکنش‌های درون زنجیره‌ای (On-chain Transactions)" else "ON-CHAIN LEDGER TRANSACTIONS", y3, isFa, Color.parseColor("#0F2042"))
+        y3 = drawSectionHeader(canvas3, paint, if (isFa) "فهرست تراکنش‌های درون زنجیره‌ای" else "ON-CHAIN LEDGER TRANSACTIONS", y3, isFa, Color.parseColor("#0F2042"))
 
         paint.color = Color.parseColor("#0F2042")
         canvas3.drawRect(30f, y3, 565f, y3 + 18f, paint)
@@ -322,7 +322,7 @@ object PdfReportExporter {
         paint.textSize = 8f
         if (isFa) {
             paint.textAlign = Paint.Align.RIGHT
-            canvas3.drawText("شناسه تراکنش (Tx Hash)", 560f, y3 + 12f, paint)
+            canvas3.drawText("شناسه تراکنش", 560f, y3 + 12f, paint)
             canvas3.drawText("جهت", 340f, y3 + 12f, paint)
             canvas3.drawText("آدرس طرف مقابل", 290f, y3 + 12f, paint)
             canvas3.drawText("مبلغ", 85f, y3 + 12f, paint)
@@ -382,7 +382,7 @@ object PdfReportExporter {
         y3 += 18f
 
         // Section: OSINT Identifiers & Evidence Items
-        y3 = drawSectionHeader(canvas3, paint, if (isFa) "شناسه‌های OSINT و تبارشناسی شواهد (Chain of Custody)" else "OSINT IDENTIFIERS & EVIDENCE LOG", y3, isFa, Color.parseColor("#4A148C"))
+        y3 = drawSectionHeader(canvas3, paint, if (isFa) "شناسه‌های OSINT و تبارشناسی شواهد" else "OSINT IDENTIFIERS & EVIDENCE LOG", y3, isFa, Color.parseColor("#4A148C"))
 
         val osintEvidences = case.evidenceLog.take(6)
         if (osintEvidences.isNotEmpty()) {
@@ -445,7 +445,7 @@ object PdfReportExporter {
 
             val totalPages = if (options.hasAnyLegalSection) 5 else 4
             drawPageFrame(canvasAi, paint, isFa, pageNumber - 1, totalPages)
-            drawSubHeader(canvasAi, paint, if (isFa) "تحلیل دستیار هوش مصنوعی (AI Copilot Summary)" else "AI COPILOT SUMMARY", isFa)
+            drawSubHeader(canvasAi, paint, if (isFa) "تحلیل دستیار هوش مصنوعی" else "AI COPILOT SUMMARY", isFa)
 
             var yAi = 80f
             yAi = drawSectionHeader(canvasAi, paint, if (isFa) "خلاصه بررسی و یافته‌های تکمیلی هوش مصنوعی" else "AI GENERATED ANALYSIS & CORRELATIONS", yAi, isFa, Color.parseColor("#4A148C"))
@@ -497,7 +497,7 @@ object PdfReportExporter {
             
             val totalPages = if (options.aiCopilotSummary != null) 5 else 4
             drawPageFrame(canvas4, paint, isFa, pageNumber - 1, totalPages)
-            drawSubHeader(canvas4, paint, if (isFa) "ضمیمه حقوقی و پیش‌نویس دستور قضایی (Subpoena Requisition)" else "JUDICIAL SUBPOENA & LEGAL ANNEX", isFa)
+            drawSubHeader(canvas4, paint, if (isFa) "ضمیمه حقوقی و پیش‌نویس دستور قضایی" else "JUDICIAL SUBPOENA & LEGAL ANNEX", isFa)
 
             var y4 = 80f
 
@@ -815,7 +815,7 @@ object PdfReportExporter {
         val sb = StringBuilder()
 
         sb.appendLine("================================================================================")
-        sb.appendLine(if (isFa) "گزارش مستندات جرم‌یابی مالی و تحلیل بلاکچین • سامانه بیِّنة (BAYYINAH)" else "BAYYINAH FORENSIC BLOCKCHAIN & OSINT INTELLIGENCE DOSSIER")
+        sb.appendLine(if (isFa) "گزارش مستندات جرم‌یابی مالی و تحلیل بلاکچین • سامانه بیِّنة" else "BAYYINAH FORENSIC BLOCKCHAIN & OSINT INTELLIGENCE DOSSIER")
         sb.appendLine("================================================================================")
         sb.appendLine(if (isFa) "کلاسه پرونده: ${case.referenceNumber}" else "Case Reference: ${case.referenceNumber}")
         sb.appendLine(if (isFa) "عنوان پرونده: ${case.caseName}" else "Case Title: ${case.caseName}")
@@ -827,7 +827,7 @@ object PdfReportExporter {
         sb.appendLine()
 
         if (options.includeLedgerFacts) {
-            sb.appendLine(if (isFa) "۱. حقایق قطعی درون بلاکچین (ON-CHAIN FACTS):" else "1. OBSERVED ON-CHAIN FACTS:")
+            sb.appendLine(if (isFa) "۱. حقایق قطعی درون بلاکچین:" else "1. OBSERVED ON-CHAIN FACTS:")
             sb.appendLine(if (isFa) "موجودی کل: ${case.balanceBtc} ${case.network.symbol}" else "Current Balance: ${case.balanceBtc} ${case.network.symbol}")
             sb.appendLine(if (isFa) "مجموع دریافتی: ${case.totalReceivedBtc} ${case.network.symbol}" else "Total Received: ${case.totalReceivedBtc} ${case.network.symbol}")
             sb.appendLine(if (isFa) "مجموع ارسالی: ${case.totalSentBtc} ${case.network.symbol}" else "Total Sent: ${case.totalSentBtc} ${case.network.symbol}")
@@ -836,7 +836,7 @@ object PdfReportExporter {
         }
 
         if (options.includeTransactions) {
-            sb.appendLine(if (isFa) "۲. فهرست تراکنش‌ها (TRANSACTIONS LIST):" else "2. TRANSACTIONS LEDGER:")
+            sb.appendLine(if (isFa) "۲. فهرست تراکنش‌ها:" else "2. TRANSACTIONS LEDGER:")
             case.transactions.take(50).forEach { tx ->
                 val isIncoming = tx.direction == TxDirection.INCOMING
                 val dir = if (isIncoming) "IN" else "OUT"
@@ -856,7 +856,7 @@ object PdfReportExporter {
 
         if (options.aiCopilotSummary != null) {
             sb.appendLine("================================================================================")
-            sb.appendLine(if (isFa) "تحلیل دستیار هوش مصنوعی (AI Copilot Summary)" else "AI COPILOT SUMMARY")
+            sb.appendLine(if (isFa) "تحلیل دستیار هوش مصنوعی" else "AI COPILOT SUMMARY")
             sb.appendLine("================================================================================")
             sb.appendLine(options.aiCopilotSummary)
             sb.appendLine()

@@ -68,7 +68,7 @@ val ForensicDarkColorScheme = darkColorScheme(
 @Composable
 fun OrbitForensicsTheme(
     themeMode: ThemeMode = ThemeMode.SYSTEM,
-    useDynamicColor: Boolean = true,
+    useDynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
     val darkTheme = when (themeMode) {

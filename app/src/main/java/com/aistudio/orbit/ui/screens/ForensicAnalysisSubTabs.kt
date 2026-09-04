@@ -212,7 +212,7 @@ fun TemporalAnalysisTab(
                                 onClick = { selectedTzTab = 0 },
                                 shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2)
                             ) {
-                                Text(if (isPersian) "تهران (IRST)" else "Tehran", fontSize = 11.sp)
+                                Text(if (isPersian) "تهران" else "Tehran", fontSize = 11.sp)
                             }
                             SegmentedButton(
                                 selected = selectedTzTab == 1,
@@ -599,7 +599,7 @@ fun PeelingChainAndFlowTab(
         if (peelingResult.hops.isNotEmpty()) {
             item {
                 Text(
-                    text = if (isPersian) "گام‌های متوالی استخراج وجه (Hop Ledger):" else "Sequential Flow Extraction Steps:",
+                    text = if (isPersian) "گام‌های متوالی استخراج وجه:" else "Sequential Flow Extraction Steps:",
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold
                 )
@@ -700,7 +700,7 @@ fun PeelingChainAndFlowTab(
                             ) {
                                 Column(modifier = Modifier.padding(8.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                                     Text(
-                                        text = if (isPersian) "مانده پاس‌داده‌شده (Change):" else "Forwarded Change:",
+                                        text = if (isPersian) "مانده پاس‌داده‌شده:" else "Forwarded Change:",
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.primary,
                                         fontWeight = FontWeight.Bold

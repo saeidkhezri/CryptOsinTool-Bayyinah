@@ -159,7 +159,7 @@ fun InvestigationFilterBar(
                             }
                             onFilterChange(filterState.copy(selectedEntityTypes = newSet))
                         },
-                        label = { Text(if (isFa) "صرافی‌ها (CEX)" else "Exchanges", style = MaterialTheme.typography.labelSmall) }
+                        label = { Text(if (isFa) "صرافی‌ها" else "Exchanges", style = MaterialTheme.typography.labelSmall) }
                     )
 
                     // Mixer Filter

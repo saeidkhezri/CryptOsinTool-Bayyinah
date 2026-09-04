@@ -52,27 +52,27 @@ object ForensicTouchTarget {
  */
 object ForensicEvidenceColors {
     // 1. Observed On-Chain Fact (100% Deterministic)
-    val observedFact = Color(0xFF10B981) // Emerald Green
-    val observedFactContainer = Color(0xFFD1FAE5)
-    val onObservedFactContainer = Color(0xFF065F46)
+    val observedFact = Color(0xFF3D7A57)
+    val observedFactContainer = Color(0xFFDCEBE1)
+    val onObservedFactContainer = Color(0xFF28563C)
 
     // 2. Algorithmic Calculation (Derived)
-    val derivedCalculation = Color(0xFF0284C7) // Sky Blue
-    val derivedCalculationContainer = Color(0xFFE0F2FE)
-    val onDerivedCalculationContainer = Color(0xFF0369A1)
+    val derivedCalculation = Color(0xFF3D6F86) // Sky Blue
+    val derivedCalculationContainer = Color(0xFFDCEAF0)
+    val onDerivedCalculationContainer = Color(0xFF2D5365)
 
     // 3. Entity Attribution & OSINT Intelligence (Off-Chain Correlation)
-    val osintAttribution = Color(0xFF8B5CF6) // Purple / Violet
-    val osintAttributionContainer = Color(0xFFEDE9FE)
-    val onOsintAttributionContainer = Color(0xFF5B21B6)
+    val osintAttribution = Color(0xFF6F6387) // Purple / Violet
+    val osintAttributionContainer = Color(0xFFE9E5EF)
+    val onOsintAttributionContainer = Color(0xFF4F465F)
 
     // 4. Behavioral Pattern / Crime Typology (Heuristic)
-    val behavioralPattern = Color(0xFFF59E0B) // Amber / Warm Orange
-    val behavioralPatternContainer = Color(0xFFFEF3C7)
-    val onBehavioralPatternContainer = Color(0xFF92400E)
+    val behavioralPattern = Color(0xFFB66A1B) // Amber / Warm Orange
+    val behavioralPatternContainer = Color(0xFFF4E8D1)
+    val onBehavioralPatternContainer = Color(0xFF6E4614)
 
     // 5. High-Risk / Suspicious Alert (Critical Forensics)
-    val riskCritical = Color(0xFFEF4444) // Crisp Red
-    val riskCriticalContainer = Color(0xFFFEE2E2)
-    val onRiskCriticalContainer = Color(0xFF991B1B)
+    val riskCritical = Color(0xFFC53B32) // Crisp Red
+    val riskCriticalContainer = Color(0xFFF4DEDC)
+    val onRiskCriticalContainer = Color(0xFF7B2621)
 }

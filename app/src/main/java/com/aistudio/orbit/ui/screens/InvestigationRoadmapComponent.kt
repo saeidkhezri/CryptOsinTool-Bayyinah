@@ -1,3 +1,4 @@
+@file:OptIn(ExperimentalLayoutApi::class)
 package com.aistudio.orbit.ui.screens
 
 import androidx.compose.foundation.background
@@ -21,6 +22,8 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDirection
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.aistudio.orbit.forensics.TemporalUtils
@@ -80,108 +83,71 @@ fun CollapsibleRoadmapHeader(
     onStageSelect: (InvestigationStage) -> Unit,
     isPersian: Boolean
 ) {
-    var isExpanded by remember { mutableStateOf(false) }
-
+    var expanded by remember { mutableStateOf(false) }
+    val stages = InvestigationStage.values()
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 8.dp, vertical = 4.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
+        shape = ForensicShapes.md,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
         border = CardDefaults.outlinedCardBorder()
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
-            // Compact Summary Bar (Always Visible)
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { isExpanded = !isExpanded }
-                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                modifier = Modifier.fillMaxWidth().clickable { expanded = !expanded }.padding(10.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.weight(1f)
-                ) {
-                    // Mode Tag
-                    Surface(
-                        shape = RoundedCornerShape(6.dp),
-                        color = MaterialTheme.colorScheme.primaryContainer,
-                        modifier = Modifier.padding(2.dp)
-                    ) {
-                        Text(
-                            text = if (isPersian) activeMode.displayNameFa else activeMode.displayNameEn,
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer,
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                        )
-                    }
-
-                    // Active Stage Summary
-                    val stageStatus = stageStatuses[currentStage] ?: StageStatus.CURRENT
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(8.dp)
-                                .clip(CircleShape)
-                                .background(stageStatus.color)
-                        )
-                        Text(
-                            text = if (isPersian) "مرحله ${currentStage.id}: ${currentStage.titleFa}" else "Stage ${currentStage.id}: ${currentStage.titleEn}",
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            maxLines = 1
-                        )
-                    }
-                }
-
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
+                Surface(shape = ForensicShapes.sm, color = MaterialTheme.colorScheme.primaryContainer) {
                     Text(
-                        text = if (isPersian) (if (isExpanded) "بستن نقشه" else "نقشه مسیر راه") else (if (isExpanded) "Hide Map" else "Roadmap"),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Icon(
-                        imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                        contentDescription = "Toggle Roadmap",
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(18.dp)
+                        if (isPersian) activeMode.displayNameFa else activeMode.displayNameEn,
+                        style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp), maxLines = 1, overflow = TextOverflow.Ellipsis
                     )
                 }
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = if (isPersian) "نقشه مسیر تحقیق" else "Investigation Roadmap",
+                        style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold,
+                        maxLines = 1, overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = "${currentStage.id} / ${stages.size} • ${if (isPersian) currentStage.titleFa else currentStage.titleEn}",
+                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1, overflow = TextOverflow.Ellipsis
+                    )
+                }
+                Icon(if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore, contentDescription = null)
             }
-
-            // Expanded Full Controls
-            androidx.compose.animation.AnimatedVisibility(visible = isExpanded) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+            if (expanded) {
+                HorizontalDivider()
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth().padding(10.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                    maxItemsInEachRow = 4
                 ) {
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-
-                    ExperienceModeSelector(
-                        activeMode = activeMode,
-                        onModeChange = onModeChange,
-                        isPersian = isPersian
-                    )
-
-                    VisualRoadmapStrip(
-                        currentStage = currentStage,
-                        stageStatuses = stageStatuses,
-                        onStageSelect = onStageSelect,
-                        isPersian = isPersian
-                    )
+                    stages.forEach { stage ->
+                        val status = stageStatuses[stage] ?: StageStatus.AVAILABLE
+                        val selected = stage == currentStage
+                        FilterChip(
+                            selected = selected,
+                            onClick = { onStageSelect(stage) },
+                            label = { Text(if (isPersian) stage.titleFa else stage.titleEn, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                            leadingIcon = {
+                                Box(Modifier.size(8.dp).clip(CircleShape).background(if (selected) MaterialTheme.colorScheme.primary else status.color))
+                            }
+                        )
+                    }
+                }
+                Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 2.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    ExperienceMode.values().forEach { mode ->
+                        FilterChip(
+                            selected = activeMode == mode,
+                            onClick = { onModeChange(mode) },
+                            label = { Text(if (isPersian) mode.displayNameFa else mode.displayNameEn, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+                        )
+                    }
                 }
             }
         }
@@ -276,7 +242,7 @@ fun VisualRoadmapStrip(
             .padding(vertical = 12.dp)
     ) {
         Text(
-            text = if (isPersian) "نقشه راه تحقیقات دیجیتال (Visual Roadmap)" else "Visual Investigation Roadmap",
+            text = if (isPersian) "نقشه راه تحقیقات دیجیتال" else "Visual Investigation Roadmap",
             style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.outline,
@@ -1288,7 +1254,7 @@ fun DeadEndHandlingView(
             HorizontalDivider(color = MaterialTheme.colorScheme.error.copy(alpha = 0.3f))
 
             Text(
-                text = if (isPersian) "🔍 چه چیزی مفقود است؟ (What is missing?)" else "🔍 What is missing?",
+                text = if (isPersian) "🔍 چه چیزی مفقود است؟" else "🔍 What is missing?",
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.error
@@ -1302,28 +1268,28 @@ fun DeadEndHandlingView(
             )
 
             Text(
-                text = if (isPersian) "💡 چرا مهم است؟ (Why does it matter?)" else "💡 Why does it matter?",
+                text = if (isPersian) "💡 چرا مهم است؟" else "💡 Why does it matter?",
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.error
             )
             Text(
                 text = if (isPersian) 
-                    "برای شروع خوشه‌بندی و رهگیری جریانPeeling، وجود حداقل یک تراکنش با مقدار معتبر الزامی است."
+                    "برای شروع خوشه‌بندی و رهگیری جریان، وجود حداقل یک تراکنش با مقدار معتبر الزامی است."
                     else "To calculate clusters and peeling flow models, at least one validated transaction is required.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
             Text(
-                text = if (isPersian) "🛠️ اقدامات و راه‌حل‌های پیشنهادی (Possible Solutions)" else "🛠️ Suggested Actions",
+                text = if (isPersian) "🛠️ اقدامات و راه‌حل‌های پیشنهادی" else "🛠️ Suggested Actions",
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary
             )
             Text(
                 text = if (isPersian) 
-                    "۱. فعال‌سازی ارائه‌دهنده‌های جایگزین (بلاکچین آفلاین)\n۲. بازنشانی و تعریض فیلتر دوره زمانی ردیابی در کنترل‌های تحلیل کارشناسی\n۳. استفاده از آدرس مرتبط دیگر به عنوان سرنخ ورودی جدید\n۴. فشردن دکمه عبور موقت (Skip) با ذکر علت نبود داده"
+                    "۱. فعال‌سازی ارائه‌دهنده‌های جایگزین (بلاکچین آفلاین)\n۲. بازنشانی و تعریض فیلتر دوره زمانی ردیابی در کنترل‌های تحلیل کارشناسی\n۳. استفاده از آدرس مرتبط دیگر به عنوان سرنخ ورودی جدید\n۴. فشردن دکمه عبور موقت با ذکر علت نبود داده"
                     else "1. Enable backup local offline databases.\n2. Extend the observation date range in the expert settings.\n3. Input an alternative sibling address as a new starting lead.\n4. Skip this stage with an official rationale record.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -1336,7 +1302,7 @@ fun DeadEndHandlingView(
             ) {
                 Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
                 Spacer(modifier = Modifier.width(6.dp))
-                Text(if (isPersian) "تلاش مجدد و به‌روزرسانیHeuristics" else "Retry Query Heuristics")
+                Text(if (isPersian) "تلاش مجدد و به‌روزرسانی شاخص‌های تحلیلی" else "Retry Query Heuristics")
             }
         }
     }
@@ -1397,7 +1363,7 @@ fun ProviderFailureView(
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
                     modifier = Modifier.weight(1f)
                 ) {
-                    Text(if (isPersian) "تلاش مجدد (Retry)" else "Retry")
+                    Text(if (isPersian) "تلاش مجدد" else "Retry")
                 }
 
                 OutlinedButton(

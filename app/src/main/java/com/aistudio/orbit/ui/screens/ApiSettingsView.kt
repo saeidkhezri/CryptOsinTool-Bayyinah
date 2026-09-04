@@ -17,6 +17,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import com.aistudio.orbit.repository.ThemeMode
+import com.aistudio.orbit.ui.theme.ForensicShapes
 import com.aistudio.orbit.forensics.database.StorageBreakdown
 import kotlinx.coroutines.launch
 import java.io.File
@@ -572,6 +573,119 @@ fun ApiSettingsView(
             }
         )
     }
+
+    if (showSetPasswordDialog) {
+        var passwordInput by remember { mutableStateOf("") }
+        var confirmPasswordInput by remember { mutableStateOf("") }
+        var passwordVisible by remember { mutableStateOf(false) }
+        var errorMessage by remember { mutableStateOf<String?>(null) }
+
+        AlertDialog(
+            onDismissRequest = { showSetPasswordDialog = false },
+            icon = { Icon(Icons.Default.Lock, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+            title = {
+                Text(
+                    text = if (isPersian) "تنظیم گذرواژه دیتابیس" else "Set Database Password",
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Text(
+                        text = if (isPersian) "گذرواژه امنیتی جهت استخراج کلید رمزگذاری ۲۵۶ بیتی (PBKDF2) برای محافظت از داده‌های فارنزیک دیتابیس در برابر دسترسی غیرمجاز. حداقل طول گذرواژه ۸ نویسه است."
+                        else "Set security password to derive PBKDF2/AES-256 keys protecting forensic datasets. Minimum 8 characters.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    OutlinedTextField(
+                        value = passwordInput,
+                        onValueChange = {
+                            passwordInput = it
+                            errorMessage = null
+                        },
+                        label = { Text(if (isPersian) "گذرواژه جدید" else "New Password") },
+                        visualTransformation = if (passwordVisible) androidx.compose.ui.text.input.VisualTransformation.None else androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                        trailingIcon = {
+                            IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                                Icon(
+                                    imageVector = if (passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                    contentDescription = null
+                                )
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+
+                    OutlinedTextField(
+                        value = confirmPasswordInput,
+                        onValueChange = {
+                            confirmPasswordInput = it
+                            errorMessage = null
+                        },
+                        label = { Text(if (isPersian) "تکرار گذرواژه" else "Confirm Password") },
+                        visualTransformation = if (passwordVisible) androidx.compose.ui.text.input.VisualTransformation.None else androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+
+                    errorMessage?.let { err ->
+                        Text(
+                            text = err,
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.labelSmall
+                        )
+                    }
+
+                    if (isDbPasswordConfigured) {
+                        OutlinedButton(
+                            onClick = {
+                                viewModel.databaseManager.clearDatabasePassword()
+                                Toast.makeText(context, if (isPersian) "رمزگذاری دیتابیس غیرفعال شد" else "Database password cleared", Toast.LENGTH_SHORT).show()
+                                showSetPasswordDialog = false
+                            },
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(if (isPersian) "حذف گذرواژه و غیرفعال‌سازی" else "Clear & Disable Password")
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (passwordInput.length < 8) {
+                            errorMessage = if (isPersian) "حداقل طول گذرواژه باید ۸ نویسه باشد" else "Password must be at least 8 characters"
+                            return@Button
+                        }
+                        if (passwordInput != confirmPasswordInput) {
+                            errorMessage = if (isPersian) "تکرار گذرواژه همخوانی ندارد" else "Passwords do not match"
+                            return@Button
+                        }
+                        val success = viewModel.databaseManager.setDatabasePassword(passwordInput)
+                        if (success) {
+                            Toast.makeText(context, if (isPersian) "گذرواژه دیتابیس با موفقیت ثبت شد" else "Database password set successfully", Toast.LENGTH_SHORT).show()
+                            showSetPasswordDialog = false
+                        } else {
+                            errorMessage = if (isPersian) "خطا در تنظیم گذرواژه" else "Failed to set password"
+                        }
+                    }
+                ) {
+                    Text(if (isPersian) "ذخیره گذرواژه" else "Save Password")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showSetPasswordDialog = false }) {
+                    Text(if (isPersian) "انصراف" else "Cancel")
+                }
+            }
+        )
+    }
 }
 
 enum class SettingsSection {
@@ -749,8 +863,10 @@ fun SettingsScaffold(
 ) {
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
+    val useLuxuryBackground = viewModel.settingsRepo.useLuxuryBackground.collectAsState().value
     
     Scaffold(
+        containerColor = if (useLuxuryBackground) Color.Transparent else MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
                 title = { 
@@ -895,7 +1011,7 @@ fun PrivacyAndAiTab(isFa: Boolean, viewModel: InvestigationViewModel) {
                         Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                         Spacer(modifier = Modifier.width(12.dp))
                         Text(
-                            text = if (isFa) "قابلیت جستجوی هوشمند (You.com)" else "Smart Search Capabilities",
+                            text = if (isFa) "قابلیت جستجوی هوشمند در وب" else "Smart Search Capabilities",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
@@ -947,7 +1063,7 @@ fun DatabaseFileManagerTab(
                     Spacer(modifier = Modifier.width(12.dp))
                     Column {
                         Text(
-                            text = if (isFa) "مدیریت فایل‌های دیتابیس (DB Manager)" else "Local Database File Manager",
+                            text = if (isFa) "مدیریت فایل‌های دیتابیس" else "Local Database File Manager",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
@@ -1013,7 +1129,7 @@ fun DatabaseFileManagerTab(
                         ) {
                             Icon(Icons.Default.FileDownload, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text(if (isFa) "استخراج (Backup)" else "Backup")
+                            Text(if (isFa) "پشتیبان‌گیری" else "Backup")
                         }
                     }
                 }
@@ -1047,7 +1163,7 @@ fun DatabaseFileManagerTab(
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text(
-                        text = if (isFa) "بازنشانی دیتابیس (Restore)" else "Restore Database",
+                        text = if (isFa) "بازنشانی دیتابیس" else "Restore Database",
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold
                     )
@@ -1094,7 +1210,7 @@ fun AppearanceTab(isFa: Boolean, viewModel: InvestigationViewModel) {
                         Icon(Icons.Default.Palette, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                         Spacer(modifier = Modifier.width(12.dp))
                         Text(
-                            text = if (isFa) "تم برنامه (Theme Mode)" else "Application Theme",
+                            text = if (isFa) "تم برنامه" else "Application Theme",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
@@ -1131,7 +1247,7 @@ fun AppearanceTab(isFa: Boolean, viewModel: InvestigationViewModel) {
                         Icon(Icons.Default.ColorLens, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                         Spacer(modifier = Modifier.width(12.dp))
                         Text(
-                            text = if (isFa) "رنگ‌بندی پویا (Material You)" else "Dynamic Color Palette",
+                            text = if (isFa) "رنگ‌بندی پویا" else "Dynamic Color Palette",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
@@ -1153,26 +1269,23 @@ fun AppearanceTab(isFa: Boolean, viewModel: InvestigationViewModel) {
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
             ) {
-                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Wallpaper, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Text(
-                            text = if (isFa) "پس‌زمینه لوکس (Node-Style)" else "Luxury Node-Style Background",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Spacer(modifier = Modifier.weight(1f))
-                        Switch(
-                            checked = viewModel.settingsRepo.useLuxuryBackground.collectAsState().value,
-                            onCheckedChange = { viewModel.settingsRepo.setUseLuxuryBackground(it) }
-                        )
-                    }
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Default.Wallpaper, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                    Spacer(modifier = Modifier.width(12.dp))
                     Text(
-                        text = if (isFa) "فعال‌سازی پس‌زمینه گره‌دار شکیل با استایل نود و کمرنگ در محیط اپلیکیشن."
-                        else "Enable the luxury, node-style background pattern throughout the application.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        text = if (isFa) "پس‌زمینه متحرک گره‌ها" else "Animated Network Nodes (Antigravity)",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.weight(1f))
+                    Switch(
+                        checked = viewModel.settingsRepo.useLuxuryBackground.collectAsState().value,
+                        onCheckedChange = { viewModel.settingsRepo.setUseLuxuryBackground(it) }
                     )
                 }
             }
@@ -2029,6 +2142,7 @@ fun ApiValidationDiagnosticsDialog(
         }
     )
 }
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 fun DatabasesTab(
     isPersian: Boolean,
@@ -2067,7 +2181,7 @@ fun DatabasesTab(
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Icon(Icons.Default.PieChart, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                             Text(
-                                text = if (isPersian) "نمای کلی حافظه ذخیره‌سازی (Storage Breakdown)" else "Storage Overview",
+                                text = if (isPersian) "نمای کلی حافظه ذخیره‌سازی" else "Storage Overview",
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold
                             )
@@ -2082,30 +2196,28 @@ fun DatabasesTab(
                         }
                     }
 
-                    // Progress metric
+                    // Progress metric chips (adaptive wrap to prevent tall squished columns)
                     val usedMb = storageBreakdown.appUsedBytes / (1024 * 1024)
                     val dbMb = storageBreakdown.databaseBytes / (1024 * 1024)
                     val cacheMb = storageBreakdown.cacheBytes / (1024 * 1024)
 
-                    Row(
+                    androidx.compose.foundation.layout.FlowRow(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Text(
-                            text = "${if (isPersian) "حجم دیتابیس‌ها: " else "Databases: "} $dbMb MB",
-                            style = MaterialTheme.typography.bodySmall,
-                            fontWeight = FontWeight.SemiBold
+                        StorageMetricChip(
+                            label = if (isPersian) "حجم دیتابیس‌ها" else "Databases",
+                            value = "$dbMb MB"
                         )
-                        Text(
-                            text = "${if (isPersian) "حافظه موقت (کش): " else "Cache: "} $cacheMb MB",
-                            style = MaterialTheme.typography.bodySmall,
-                            fontWeight = FontWeight.SemiBold
+                        StorageMetricChip(
+                            label = if (isPersian) "حافظه موقت کش" else "Cache",
+                            value = "$cacheMb MB"
                         )
-                        Text(
-                            text = "${if (isPersian) "کل مصرف برنامه: " else "App Total: "} $usedMb MB",
-                            style = MaterialTheme.typography.bodySmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
+                        StorageMetricChip(
+                            label = if (isPersian) "کل مصرف برنامه" else "Total Storage",
+                            value = "$usedMb MB",
+                            isHighlight = true
                         )
                     }
                 }
@@ -2129,14 +2241,14 @@ fun DatabasesTab(
                             Icon(Icons.Default.LockClock, contentDescription = null, tint = MaterialTheme.colorScheme.onErrorContainer)
                             Column {
                                 Text(
-                                    text = if (isPersian) "رمزگذاری ارشد دیتابیس فعال نیست" else "Database Master Encryption Inactive",
+                                    text = if (isPersian) "رمزگذاری دیتابیس فعال نیست" else "Database Encryption Inactive",
                                     style = MaterialTheme.typography.titleSmall,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onErrorContainer
                                 )
                                 Text(
-                                    text = if (isPersian) "جهت حفاظت از دیتابیس‌های فارنزیک با AES-256-GCM گذرواژه تعیین نمایید."
-                                    else "Set master password to derive PBKDF2/AES-256 keys for forensic datasets.",
+                                    text = if (isPersian) "جهت حفاظت از دیتابیس‌های فارنزیک با استاندارد امنیتی گذرواژه تعیین نمایید."
+                                    else "Set security password to derive PBKDF2/AES-256 keys for forensic datasets.",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onErrorContainer
                                 )
@@ -2219,24 +2331,24 @@ fun DatabaseCatalogCard(
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(8.dp))
                     .background(MaterialTheme.colorScheme.surfaceContainerLowest)
-                    .padding(8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween
+                    .padding(horizontal = 8.dp, vertical = 6.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                Column {
-                    Text(if (isPersian) "تعداد رکوردها" else "Records", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text("${db.recordCount}", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(if (isPersian) "تعداد رکورد" else "Records", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text("${db.recordCount}", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold, maxLines = 1)
                 }
-                Column {
-                    Text(if (isPersian) "حجم داده" else "Size", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text("${db.recommendedSizeBytes / (1024 * 1024)} MB", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(if (isPersian) "حجم داده" else "Size", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text("${db.recommendedSizeBytes / (1024 * 1024)} MB", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold, maxLines = 1)
                 }
-                Column {
-                    Text(if (isPersian) "وضعیت ایندکس" else "Index", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text(if (isPersian) db.indexStatus.titleFa else db.indexStatus.titleEn, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold, color = if (db.isIndexed) Color(0xFF2E7D32) else Color(0xFFD32F2F))
+                Column(modifier = Modifier.weight(1.2f)) {
+                    Text(if (isPersian) "ایندکس" else "Index", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(if (isPersian) db.indexStatus.titleFa else db.indexStatus.titleEn, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold, color = if (db.isIndexed) Color(0xFF2E7D32) else Color(0xFFD32F2F), maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
-                Column {
-                    Text(if (isPersian) "نسخه" else "Version", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text(db.version, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
+                Column(modifier = Modifier.weight(0.8f)) {
+                    Text(if (isPersian) "نسخه" else "Version", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(db.version, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold, maxLines = 1)
                 }
             }
 
@@ -2357,6 +2469,37 @@ fun DatabaseCatalogCard(
     }
 }
 
+@Composable
+private fun StorageMetricChip(
+    label: String,
+    value: String,
+    isHighlight: Boolean = false
+) {
+    Surface(
+        shape = RoundedCornerShape(8.dp),
+        color = if (isHighlight) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerLowest,
+        modifier = Modifier.padding(vertical = 2.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                color = if (isHighlight) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = value,
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = FontWeight.Bold,
+                color = if (isHighlight) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+            )
+        }
+    }
+}
+
 // ==========================================
 // TAB 3: SECURITY & ENCRYPTION
 // ==========================================
@@ -2405,7 +2548,7 @@ fun SecurityTab(
 
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
-                    // Master Password Config
+                    // Password Config
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -2413,13 +2556,13 @@ fun SecurityTab(
                     ) {
                         Column {
                             Text(
-                                text = if (isPersian) "گذرواژه ارشد دیتابیس (PBKDF2-HMAC-SHA256)" else "Database Master Password (PBKDF2)",
+                                text = if (isPersian) "گذرواژه دیتابیس" else "Database Password",
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.SemiBold
                             )
                             Text(
                                 text = if (isDbPasswordConfigured) (if (isPersian) "فعال و رمزگذاری شده" else "Configured & Active")
-                                else (if (isPersian) "غیرفعال (نیاز به تنظیم)" else "Not Configured"),
+                                else (if (isPersian) "غیرفعال" else "Not Configured"),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = if (isDbPasswordConfigured) Color(0xFF2E7D32) else MaterialTheme.colorScheme.error,
                                 fontWeight = FontWeight.Bold
@@ -2463,7 +2606,7 @@ fun SecurityTab(
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = if (isPersian) "محافظت در برابر مسدودسازی نرخ استعلام (Rate-Limit Guard)" else "Rate-Limit Protection Guard",
+                                text = if (isPersian) "محافظت در برابر مسدودسازی نرخ استعلام" else "Rate-Limit Protection Guard",
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.SemiBold
                             )
@@ -2515,7 +2658,7 @@ fun CasesAndBackupsTab(
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         Icon(Icons.Default.Archive, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                         Text(
-                            text = if (isPersian) "استخراج بسته پرونده و زنجیره ادله (Case Export)" else "Export Forensic Case Package",
+                            text = if (isPersian) "استخراج بسته پرونده و زنجیره ادله" else "Export Forensic Case Package",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
@@ -2588,7 +2731,7 @@ fun CasesAndBackupsTab(
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         Icon(Icons.Default.Unarchive, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                         Text(
-                            text = if (isPersian) "بارگزاری پرونده با مدیریت تداخل (Case Import)" else "Import Case Package",
+                            text = if (isPersian) "بارگزاری پرونده با مدیریت تداخل" else "Import Case Package",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
@@ -2706,7 +2849,7 @@ fun SystemAndAuditTab(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(if (isPersian) "تقویم جلالی (هجری شمسی)" else "Jalali Solar Calendar", style = MaterialTheme.typography.bodyMedium)
+                        Text(if (isPersian) "تقویم جلالی خورشیدی" else "Jalali Solar Calendar", style = MaterialTheme.typography.bodyMedium)
                         Switch(checked = useJalali, onCheckedChange = { viewModel.settingsRepo.setUseJalali(it) })
                     }
 
@@ -2715,8 +2858,39 @@ fun SystemAndAuditTab(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(if (isPersian) "منطقه زمانی تهران (Tehran Timezone UTC+3:30)" else "Tehran Timezone (UTC+3:30)", style = MaterialTheme.typography.bodyMedium)
+                        Text(if (isPersian) "منطقه زمانی تهران (UTC+3:30)" else "Tehran Timezone (UTC+3:30)", style = MaterialTheme.typography.bodyMedium)
                         Switch(checked = useTehranTz, onCheckedChange = { viewModel.settingsRepo.setUseTehranTz(it) })
+                    }
+                }
+            }
+        }
+
+        // Local owner access: prevents the single-device owner from being locked out of reports/settings.
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = ForensicShapes.md,
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Icon(Icons.Default.AdminPanelSettings, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(if (isPersian) "دسترسی مالک برنامه" else "Application Owner Access", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                        Text(
+                            if (currentUser?.role == com.aistudio.orbit.model.UserRole.ADMINISTRATOR)
+                                (if (isPersian) "مالک/مدیر محلی فعال است و به گزارش‌ها، تنظیمات و همه مجوزهای سامانه دسترسی کامل دارد." else "Local owner/administrator is active with full access to reports, settings, and all application permissions.")
+                            else (if (isPersian) "جلسه مالک محلی فعال نیست." else "Local owner session is not active."),
+                            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
+                    if (currentUser?.role == com.aistudio.orbit.model.UserRole.ADMINISTRATOR) {
+                        AssistChip(onClick = {}, label = { Text(if (isPersian) "کامل" else "Full") }, leadingIcon = { Icon(Icons.Default.VerifiedUser, contentDescription = null, modifier = Modifier.size(16.dp)) })
+                    } else {
+                        OutlinedButton(onClick = { com.aistudio.orbit.security.auth.AuthManager.ensureLocalOwnerSession() }) { Text(if (isPersian) "فعال‌سازی مالک" else "Enable Owner") }
                     }
                 }
             }
@@ -2741,7 +2915,7 @@ fun SystemAndAuditTab(
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Icon(Icons.Default.HistoryEdu, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                             Text(
-                                text = if (isPersian) "مرکز لاگ‌های ممیزی قضایی (Forensic Audit Trail)" else "Forensic Audit Trail",
+                                text = if (isPersian) "مرکز لاگ‌های ممیزی قضایی" else "Forensic Audit Trail",
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold
                             )

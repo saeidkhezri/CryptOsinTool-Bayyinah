@@ -110,7 +110,7 @@ fun ForensicOperationProgressDialog(
     Dialog(
         onDismissRequest = { /* Prevent accidental dismiss without cancel */ },
         properties = DialogProperties(
-            dismissOnBackPress = true,
+            dismissOnBackPress = false,
             dismissOnClickOutside = false,
             usePlatformDefaultWidth = false
         )
@@ -143,8 +143,8 @@ fun ForensicOperationProgressDialog(
                         modifier = Modifier
                             .size(46.dp)
                             .clip(CircleShape)
-                            .background(Color(0xFF00FF66).copy(alpha = 0.15f))
-                            .border(1.5.dp, Color(0xFF00FF66).copy(alpha = phosphorPulse), CircleShape),
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.10f))
+                            .border(1.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = phosphorPulse), CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
@@ -153,7 +153,7 @@ fun ForensicOperationProgressDialog(
                             modifier = Modifier
                                 .size(24.dp)
                                 .rotate(rotation),
-                            tint = Color(0xFF00FF66)
+                            tint = MaterialTheme.colorScheme.primary
                         )
                     }
 
@@ -259,7 +259,7 @@ fun ForensicOperationProgressDialog(
                             text = "${(progressVal * 100).toInt()}%",
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFF00FF66)
+                            color = MaterialTheme.colorScheme.primary
                         )
                     }
 
@@ -269,7 +269,7 @@ fun ForensicOperationProgressDialog(
                             .fillMaxWidth()
                             .height(8.dp)
                             .clip(RoundedCornerShape(4.dp)),
-                        color = Color(0xFF00FF66),
+                        color = MaterialTheme.colorScheme.primary,
                         trackColor = MaterialTheme.colorScheme.surfaceVariant
                     )
                 }
@@ -319,14 +319,14 @@ fun ForensicOperationProgressDialog(
                                         Icon(
                                             imageVector = Icons.Default.CheckCircle,
                                             contentDescription = "Completed",
-                                            tint = Color(0xFF00FF66),
+                                            tint = MaterialTheme.colorScheme.primary,
                                             modifier = Modifier.size(18.dp)
                                         )
                                     } else if (task.isCurrent) {
                                         CircularProgressIndicator(
                                             modifier = Modifier.size(16.dp),
                                             strokeWidth = 2.dp,
-                                            color = Color(0xFF00FF66)
+                                            color = MaterialTheme.colorScheme.primary
                                         )
                                     } else {
                                         Icon(
@@ -343,7 +343,7 @@ fun ForensicOperationProgressDialog(
                                         fontWeight = if (task.isCurrent) FontWeight.Bold else FontWeight.Normal,
                                         color = when {
                                             task.isCompleted -> MaterialTheme.colorScheme.onSurface
-                                            task.isCurrent -> Color(0xFF00FF66)
+                                            task.isCurrent -> MaterialTheme.colorScheme.primary
                                             else -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                                         },
                                         maxLines = 1,
@@ -409,7 +409,7 @@ private fun PhosphorLedBadge(
     pulseAlpha: Float,
     modifier: Modifier = Modifier
 ) {
-    val phosphorGreen = Color(0xFF00FF66)
+    val phosphorGreen = MaterialTheme.colorScheme.primary
     val phosphorAmber = Color(0xFFFFB300)
     val phosphorCyan = Color(0xFF00E5FF)
     val phosphorRed = Color(0xFFFF3366)
@@ -504,7 +504,7 @@ fun ForensicProgressBanner(
             CircularProgressIndicator(
                 modifier = Modifier.size(24.dp),
                 strokeWidth = 2.5.dp,
-                color = Color(0xFF00FF66)
+                color = MaterialTheme.colorScheme.primary
             )
 
             Column(modifier = Modifier.weight(1f)) {

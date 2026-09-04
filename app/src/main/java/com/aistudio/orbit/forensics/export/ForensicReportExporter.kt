@@ -49,7 +49,7 @@ object ForensicReportExporter {
         sb.appendLine("${if (isPersian) "تعداد طرف‌های مقابل شناسایی‌نشده/شده:" else "Identified Counterparties:"} ${investigationCase.counterparties.size}")
         sb.appendLine()
 
-        sb.appendLine("--- ${if (isPersian) "زنجیره اصل ادله و طبقه‌بندی حقوقی (Evidence Provenance Chain)" else "EVIDENCE LOG & FORENSIC CATEGORIZATION"} ---")
+        sb.appendLine("--- ${if (isPersian) "زنجیره اصل ادله و طبقه‌بندی حقوقی" else "EVIDENCE LOG & FORENSIC CATEGORIZATION"} ---")
         sb.appendLine(if (isPersian) "[تفکیک حقایق قطعی، محاسبات الگوریتمی، انتسابات هویتی و الگوهای رفتاری مشکوک]" else "[Direct Facts, Calculations, Attributions & Suspicious Behavioral Patterns]")
         investigationCase.evidenceLog.forEachIndexed { idx, item ->
             val catLabel = if (isPersian) item.category.displayNameFa else item.category.displayNameEn
@@ -61,7 +61,7 @@ object ForensicReportExporter {
         sb.appendLine()
 
         if (investigationCase.riskIndicators.isNotEmpty()) {
-            sb.appendLine("--- ${if (isPersian) "شاخص‌های ریسک و انطباق با الگوهای پولشویی (AML Typologies)" else "RISK INDICATORS & AML TYPOLOGIES"} ---")
+            sb.appendLine("--- ${if (isPersian) "شاخص‌های ریسک و انطباق با الگوهای پولشویی" else "RISK INDICATORS & AML TYPOLOGIES"} ---")
             investigationCase.riskIndicators.forEach { risk ->
                 sb.appendLine("• [${risk.severity.name}] [${if (isPersian) "امتیاز انطباق:" else "Score:"} ${String.format("%.1f", risk.matchingScore)}%] ${risk.title}")
                 sb.appendLine("  ${risk.description}")

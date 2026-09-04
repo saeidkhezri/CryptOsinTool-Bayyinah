@@ -91,11 +91,14 @@ fun OsintInvestigationView(
     // Evidence inspection modal / sheet
     var selectedEvidenceToInspect by remember { mutableStateOf<OsintEvidenceItem?>(null) }
 
+    val useLuxuryBackground = viewModel.settingsRepo.useLuxuryBackground.collectAsState().value
+
     CompositionLocalProvider(LocalLayoutDirection provides layoutDirection) {
         AdaptiveScaffold(
+            containerColor = if (useLuxuryBackground) Color.Transparent else MaterialTheme.colorScheme.background,
             topBar = {
                 Surface(
-                    color = MaterialTheme.colorScheme.surface,
+                    color = if (useLuxuryBackground) MaterialTheme.colorScheme.surface.copy(alpha = 0.85f) else MaterialTheme.colorScheme.surface,
                     tonalElevation = 2.dp,
                     shadowElevation = 2.dp
                 ) {
@@ -365,58 +368,109 @@ fun OsintInvestigationView(
                     item {
                         ForensicCard {
                             ForensicSectionHeader(
-                                title = if (isFa) "ورود و مدیریت سرنخ‌های تحقیقاتی (Multi-Seed Support)" else "Investigation Seed Manager",
+                                title = if (isFa) "ورود و مدیریت سرنخ‌های چندگانه تحقیقاتی" else "Investigation Seed Manager",
                                 subtitle = if (isFa) "پشتیبانی از آدرس‌های BTC/ETH/TRX، تراکنش، نام کاربری، دامنه، ایمیل، IP، ASN، گیت‌هاب و تلگرام" else "Supports Crypto Addresses, TXIDs, Usernames, Domains, Emails, IPs, ASNs, GitHub & Telegram",
                                 icon = Icons.Default.AddLocationAlt
                             )
 
-                            // Input Box with Instant Auto-Classifier
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                OutlinedTextField(
-                                    value = seedInputText,
-                                    onValueChange = { seedInputText = it },
-                                    placeholder = {
-                                        Text(
-                                            if (isFa) "نمونه: bc1q..., 0x..., @username, example.com, admin@org.io, 185.220.101.5"
-                                            else "e.g. bc1q..., 0x..., @username, example.com, admin@org.io, 185.220.101.5",
-                                            style = MaterialTheme.typography.bodySmall
+                            // Responsive seed input: stack controls on narrow screens to prevent
+                            // the text field from collapsing into a one-character column.
+                            BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                                val compactInput = maxWidth < 520.dp
+                                if (compactInput) {
+                                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        OutlinedTextField(
+                                            value = seedInputText,
+                                            onValueChange = { seedInputText = it },
+                                            placeholder = {
+                                                Text(
+                                                    if (isFa) "آدرس یا شناسه عمومی سرنخ" else "Public address or identifier",
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis
+                                                )
+                                            },
+                                            modifier = Modifier.fillMaxWidth(),
+                                            shape = ForensicShapes.md,
+                                            singleLine = true,
+                                            textStyle = MaterialTheme.typography.bodyMedium.copy(
+                                                fontFamily = FontFamily.Monospace,
+                                                textDirection = TextDirection.Ltr
+                                            ),
+                                            trailingIcon = {
+                                                if (classifiedSeedPreview != null) {
+                                                    ForensicBadge(
+                                                        text = if (isFa) classifiedSeedPreview.type.displayNameFa else classifiedSeedPreview.type.displayNameEn,
+                                                        badgeType = ForensicBadgeType.INFO,
+                                                        modifier = Modifier.padding(end = 4.dp)
+                                                    )
+                                                }
+                                            }
                                         )
-                                    },
-                                    modifier = Modifier.weight(1f),
-                                    shape = ForensicShapes.md,
-                                    singleLine = true,
-                                    textStyle = MaterialTheme.typography.bodyMedium.copy(
-                                        fontFamily = FontFamily.Monospace,
-                                        textDirection = TextDirection.Ltr
-                                    ),
-                                    trailingIcon = {
-                                        if (classifiedSeedPreview != null) {
-                                            ForensicBadge(
-                                                text = if (isFa) classifiedSeedPreview.type.displayNameFa else classifiedSeedPreview.type.displayNameEn,
-                                                badgeType = ForensicBadgeType.INFO,
-                                                modifier = Modifier.padding(end = 4.dp)
-                                            )
+                                        Button(
+                                            onClick = {
+                                                if (seedInputText.isNotBlank()) {
+                                                    viewModel.addOsintSeed(seedInputText)
+                                                    seedInputText = ""
+                                                }
+                                            },
+                                            shape = ForensicShapes.md,
+                                            modifier = Modifier.fillMaxWidth().height(52.dp)
+                                        ) {
+                                            Icon(Icons.Default.Add, contentDescription = null)
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Text(if (isFa) "افزودن سرنخ" else "Add Seed")
                                         }
                                     }
-                                )
-
-                                Button(
-                                    onClick = {
-                                        if (seedInputText.isNotBlank()) {
-                                            viewModel.addOsintSeed(seedInputText)
-                                            seedInputText = ""
+                                } else {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        OutlinedTextField(
+                                            value = seedInputText,
+                                            onValueChange = { seedInputText = it },
+                                            placeholder = {
+                                                Text(
+                                                    if (isFa) "آدرس یا شناسه عمومی سرنخ" else "Public address or identifier",
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis
+                                                )
+                                            },
+                                            modifier = Modifier.weight(1f),
+                                            shape = ForensicShapes.md,
+                                            singleLine = true,
+                                            textStyle = MaterialTheme.typography.bodyMedium.copy(
+                                                fontFamily = FontFamily.Monospace,
+                                                textDirection = TextDirection.Ltr
+                                            ),
+                                            trailingIcon = {
+                                                if (classifiedSeedPreview != null) {
+                                                    ForensicBadge(
+                                                        text = if (isFa) classifiedSeedPreview.type.displayNameFa else classifiedSeedPreview.type.displayNameEn,
+                                                        badgeType = ForensicBadgeType.INFO,
+                                                        modifier = Modifier.padding(end = 4.dp)
+                                                    )
+                                                }
+                                            }
+                                        )
+                                        Button(
+                                            onClick = {
+                                                if (seedInputText.isNotBlank()) {
+                                                    viewModel.addOsintSeed(seedInputText)
+                                                    seedInputText = ""
+                                                }
+                                            },
+                                            shape = ForensicShapes.md,
+                                            modifier = Modifier.height(52.dp)
+                                        ) {
+                                            Icon(Icons.Default.Add, contentDescription = null)
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Text(if (isFa) "افزودن" else "Add")
                                         }
-                                    },
-                                    shape = ForensicShapes.md,
-                                    modifier = Modifier.height(56.dp)
-                                ) {
-                                    Icon(Icons.Default.Add, contentDescription = null)
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text(if (isFa) "افزودن سرنخ" else "Add Seed")
+                                    }
                                 }
                             }
 
@@ -901,7 +955,7 @@ fun OsintInvestigationView(
                     item {
                         ForensicCard {
                             ForensicSectionHeader(
-                                title = if (isFa) "ارائه‌دهندگان و ماژول‌های اطلاعاتی (Pluggable Providers)" else "Pluggable OSINT Source Providers",
+                                title = if (isFa) "ارائه‌دهندگان و ماژول‌های اطلاعاتی" else "Pluggable OSINT Source Providers",
                                 subtitle = if (isFa) "مدیریت SpiderFoot، Maigret، Sherlock، theHarvester، OpenSanctions، MISP و GraphSense" else "Manage SpiderFoot, Maigret, Sherlock, theHarvester, OpenSanctions, MISP & GraphSense",
                                 icon = Icons.Default.SettingsInputComponent
                             )

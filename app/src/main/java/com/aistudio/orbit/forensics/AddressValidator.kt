@@ -113,14 +113,14 @@ object AddressValidator {
 
     fun getAddressTypeLabel(type: AddressType, isPersian: Boolean): String {
         return when (type) {
-            AddressType.BTC_LEGACY_P2PKH -> if (isPersian) "بیت‌کوین سنتی (P2PKH - Legacy)" else "Bitcoin Legacy (P2PKH)"
-            AddressType.BTC_P2SH -> if (isPersian) "بیت‌کوین چندامضایی/سگ‌ویت رپد (P2SH)" else "Bitcoin P2SH (Script/Multisig)"
-            AddressType.BTC_BECH32_SEGWIT -> if (isPersian) "بیت‌کوین نیتیو سگ‌ویت (Bech32 - SegWit)" else "Bitcoin Native SegWit (Bech32)"
-            AddressType.BTC_TAPROOT -> if (isPersian) "بیت‌کوین تپ‌روت (Bech32m - Taproot)" else "Bitcoin Taproot (Bech32m)"
-            AddressType.ETH_EVM -> if (isPersian) "اتریوم / ماشین مجازی اتریوم (EVM - Hex)" else "Ethereum / EVM Hex Address"
-            AddressType.TRON_BASE58 -> if (isPersian) "ترون (TRC-20 Base58)" else "TRON Network (TRC-20 Base58)"
-            AddressType.SOLANA_BASE58 -> if (isPersian) "سولانا (Solana Base58)" else "Solana Network Base58"
-            AddressType.UNKNOWN -> if (isPersian) "نامشخص / غیراستاندارد" else "Unknown / Non-Standard"
+            AddressType.BTC_LEGACY_P2PKH -> if (isPersian) "بیت‌کوین سنتی P2PKH" else "Bitcoin Legacy (P2PKH)"
+            AddressType.BTC_P2SH -> if (isPersian) "بیت‌کوین چندامضایی P2SH" else "Bitcoin P2SH (Script/Multisig)"
+            AddressType.BTC_BECH32_SEGWIT -> if (isPersian) "بیت‌کوین نیتیو سگ‌ویت Bech32" else "Bitcoin Native SegWit (Bech32)"
+            AddressType.BTC_TAPROOT -> if (isPersian) "بیت‌کوین تپ‌روت Taproot" else "Bitcoin Taproot (Bech32m)"
+            AddressType.ETH_EVM -> if (isPersian) "اتریوم و شبکه‌های EVM" else "Ethereum / EVM Hex Address"
+            AddressType.TRON_BASE58 -> if (isPersian) "شبکه ترون TRC-20" else "TRON Network (TRC-20 Base58)"
+            AddressType.SOLANA_BASE58 -> if (isPersian) "شبکه سولانا" else "Solana Network Base58"
+            AddressType.UNKNOWN -> if (isPersian) "نامشخص و غیراستاندارد" else "Unknown / Non-Standard"
         }
     }
 }

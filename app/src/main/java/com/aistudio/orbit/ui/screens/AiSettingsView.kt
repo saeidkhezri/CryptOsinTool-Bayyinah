@@ -72,7 +72,7 @@ fun AiSettingsView(
                     Spacer(modifier = Modifier.width(ForensicSpacing.md))
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = if (isFa) "حالت حریم خصوصی محلی (Privacy Mode)" else "Privacy Mode (Local Only)",
+                            text = if (isFa) "حالت حریم خصوصی فقط محلی" else "Privacy Mode (Local Only)",
                             fontWeight = FontWeight.Bold,
                             color = if (localOnly) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onPrimaryContainer
                         )

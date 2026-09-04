@@ -58,7 +58,7 @@ fun Stage7ReportExportView(
     var reportOptions by remember { mutableStateOf(ForensicReportOptions()) }
 
     val currentUser by com.aistudio.orbit.security.auth.AuthManager.currentUser.collectAsState()
-    val hasPermission = currentUser?.role == com.aistudio.orbit.model.UserRole.ADMINISTRATOR || 
+    val hasPermission = currentUser?.role == com.aistudio.orbit.model.UserRole.ADMINISTRATOR ||
                         currentUser?.grantedPermissions?.contains(com.aistudio.orbit.model.ForensicPermission.FORENSIC_REPORTS_EXPORT) == true
 
     val filteredEvidence = remember(investigationCase.evidenceLog, selectedEvidenceFilter, filterState) {
@@ -91,7 +91,7 @@ fun Stage7ReportExportView(
                         modifier = Modifier.size(64.dp)
                     )
                     Text(
-                        text = if (isFa) "خطای عدم دسترسی مجاز (RBAC)" else "Access Control Restriction",
+                        text = if (isFa) "خطای عدم دسترسی مجاز" else "Access Control Restriction",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onErrorContainer
@@ -504,7 +504,7 @@ fun Stage7ReportExportView(
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                 Icon(Icons.Default.Gavel, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
                                 Text(
-                                    text = if (isFa) "استاندارد تحدید مرز معرفتی (Epistemic Demarcation)" else "Epistemic Demarcation Standard",
+                                    text = if (isFa) "استاندارد تحدید مرز معرفتی و ادله" else "Epistemic Demarcation Standard",
                                     style = MaterialTheme.typography.titleSmall,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.primary
@@ -640,7 +640,7 @@ fun Stage7ReportExportView(
                                 onCheckedChange = { reportOptions = reportOptions.copy(includeTransactions = it) }
                             )
                             ReportCheckboxRow(
-                                label = if (isFa) "تصویر نمودار توپولوژی گراف (Image)" else "Topology Graph Diagram (High-Res Image)",
+                                label = if (isFa) "تصویر نمودار توپولوژی گراف" else "Topology Graph Diagram (High-Res Image)",
                                 checked = reportOptions.includeGraphDiagram,
                                 onCheckedChange = { reportOptions = reportOptions.copy(includeGraphDiagram = it) }
                             )
@@ -675,7 +675,7 @@ fun Stage7ReportExportView(
                         ) {
                             Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                 Text(
-                                    text = if (isFa) "تحلیل دستیار هوشمند (AI Copilot)" else "AI Copilot Analysis",
+                                    text = if (isFa) "تحلیل دستیار هوشمند هوش مصنوعی" else "AI Copilot Analysis",
                                     style = MaterialTheme.typography.labelMedium,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onPrimaryContainer
@@ -717,14 +717,14 @@ fun Stage7ReportExportView(
                     ) {
                         Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                             Text(
-                                text = if (isFa) "۲. ضمائم حقوقی و استعلامات قضایی (اختیاری)" else "2. Judicial & Subpoena Annexes (Optional)",
+                                text = if (isFa) "۲. ضمائم حقوقی و استعلامات قضایی" else "2. Judicial & Subpoena Annexes (Optional)",
                                 style = MaterialTheme.typography.labelMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = Color(0xFFB45309)
                             )
 
                             ReportCheckboxRow(
-                                label = if (isFa) "پیش‌نویس استعلام و دستور قضایی (Subpoena)" else "Judicial Subpoena & KYC Disclosure Order",
+                                label = if (isFa) "پیش‌نویس استعلام و دستور قضایی" else "Judicial Subpoena & KYC Disclosure Order",
                                 checked = reportOptions.includeExchangeSubpoena,
                                 onCheckedChange = { reportOptions = reportOptions.copy(includeExchangeSubpoena = it) }
                             )
@@ -836,15 +836,15 @@ fun Stage7EvidenceCard(item: EvidenceItem, isFa: Boolean) {
     var expandedProvenance by remember { mutableStateOf(false) }
 
     val (categoryColor, categoryLabel) = when (item.category) {
-        EvidenceCategory.OBSERVED_ON_CHAIN -> Pair(Color(0xFF2E7D32), if (isFa) "حقیقت قطعی دفترکل (Direct Fact)" else "Directly Observed Fact")
-        EvidenceCategory.ALGORITHMIC_RESULT -> Pair(Color(0xFF1565C0), if (isFa) "محاسبه الگوریتمی (Calculation)" else "Algorithmic Calculation")
-        EvidenceCategory.ATTRIBUTION, EvidenceCategory.OSINT_INTELLIGENCE -> Pair(Color(0xFF6A1B9A), if (isFa) "انتساب هویتی (Attribution)" else "Entity Attribution")
-        EvidenceCategory.SANCTIONS_MATCH -> Pair(Color(0xFFB71C1C), if (isFa) "تطابق تحریم‌ها (Sanctions Screening)" else "Sanctions Screening")
-        EvidenceCategory.BEHAVIORAL_PATTERN -> Pair(Color(0xFFC62828), if (isFa) "الگوی رفتاری و ریسک (Pattern Match)" else "Behavioral Pattern")
-        EvidenceCategory.TEMPORAL_ANALYSIS -> Pair(Color(0xFFEF6C00), if (isFa) "تحلیل زمانی (Temporal Analysis)" else "Temporal Analysis")
-        EvidenceCategory.AI_INFERENCE -> Pair(Color(0xFF00838F), if (isFa) "استنتاج هوش مصنوعی (AI Inference)" else "AI-Assisted Inference")
-        EvidenceCategory.INVESTIGATOR_CONCLUSION -> Pair(Color(0xFF455A64), if (isFa) "یادداشت کارشناس (Investigator Note)" else "Investigator Assessment")
-        EvidenceCategory.EXTERNAL_SOURCE -> Pair(Color(0xFF5E35B1), if (isFa) "منبع خارجی (External Source)" else "External Source")
+        EvidenceCategory.OBSERVED_ON_CHAIN -> Pair(Color(0xFF2E7D32), if (isFa) "حقیقت قطعی دفترکل" else "Directly Observed Fact")
+        EvidenceCategory.ALGORITHMIC_RESULT -> Pair(Color(0xFF1565C0), if (isFa) "محاسبه الگوریتمی" else "Algorithmic Calculation")
+        EvidenceCategory.ATTRIBUTION, EvidenceCategory.OSINT_INTELLIGENCE -> Pair(Color(0xFF6A1B9A), if (isFa) "انتساب هویتی" else "Entity Attribution")
+        EvidenceCategory.SANCTIONS_MATCH -> Pair(Color(0xFFB71C1C), if (isFa) "تطابق تحریم‌ها" else "Sanctions Screening")
+        EvidenceCategory.BEHAVIORAL_PATTERN -> Pair(Color(0xFFC62828), if (isFa) "الگوی رفتاری و ریسک" else "Behavioral Pattern")
+        EvidenceCategory.TEMPORAL_ANALYSIS -> Pair(Color(0xFFEF6C00), if (isFa) "تحلیل زمانی" else "Temporal Analysis")
+        EvidenceCategory.AI_INFERENCE -> Pair(Color(0xFF00838F), if (isFa) "استنتاج هوش مصنوعی" else "AI-Assisted Inference")
+        EvidenceCategory.INVESTIGATOR_CONCLUSION -> Pair(Color(0xFF455A64), if (isFa) "یادداشت کارشناس" else "Investigator Assessment")
+        EvidenceCategory.EXTERNAL_SOURCE -> Pair(Color(0xFF5E35B1), if (isFa) "منبع خارجی" else "External Source")
     }
 
     Card(
@@ -906,7 +906,7 @@ fun Stage7EvidenceCard(item: EvidenceItem, isFa: Boolean) {
                     contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp)
                 ) {
                     Text(
-                        text = if (expandedProvenance) (if (isFa) "بستن زنجیره اصل ادله" else "Hide Provenance") else (if (isFa) "زنجیره اصل ادله (Provenance)" else "View Provenance"),
+                        text = if (expandedProvenance) (if (isFa) "بستن زنجیره اصل ادله" else "Hide Provenance") else (if (isFa) "زنجیره اصل ادله" else "View Provenance"),
                         style = MaterialTheme.typography.labelSmall
                     )
                 }
@@ -920,7 +920,7 @@ fun Stage7EvidenceCard(item: EvidenceItem, isFa: Boolean) {
                 ) {
                     Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text(
-                            text = if (isFa) "ردپای زنجیره اصل ادله (Forensic Provenance Trail):" else "Forensic Provenance & Audit Trail:",
+                            text = if (isFa) "ردپای زنجیره اصل ادله:" else "Forensic Provenance & Audit Trail:",
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary

@@ -26,6 +26,32 @@ object AuthManager {
     private val _auditLogs = MutableStateFlow<List<AuditLogEntry>>(emptyList())
     val auditLogs: StateFlow<List<AuditLogEntry>> = _auditLogs.asStateFlow()
 
+    /**
+     * Local single-operator owner mode for the Android edition.
+     * It is deliberately credential-free because this build is a local investigator client,
+     * not a multi-user server. It prevents the owner from being locked out of reports/settings
+     * when no persistent account store has been provisioned yet. A future server deployment must
+     * replace this with persistent authenticated sessions.
+     */
+    fun ensureLocalOwnerSession() {
+        if (_currentUser.value != null) return
+        if (_usersList.value.isEmpty()) {
+            val owner = UserAccount(
+                userId = "local-owner",
+                username = "owner",
+                displayName = "مالک محلی / Local Owner",
+                role = UserRole.ADMINISTRATOR,
+                isEnabled = true,
+                requiresPasswordChange = false,
+                grantedPermissions = allPermissions,
+                createdTimestamp = System.currentTimeMillis()
+            )
+            _usersList.value = listOf(owner)
+            _currentUser.value = owner
+            logAudit("LOCAL_OWNER_SESSION", owner.userId, "Local owner session initialized with full permissions.")
+        }
+    }
+
     fun provisionInitialAdministrator(username: String, password: String): Result<UserAccount> {
         if (_usersList.value.isNotEmpty()) return Result.failure(IllegalStateException("Initial administrator already provisioned"))
         if (!username.matches(Regex("[A-Za-z0-9._-]{3,64}"))) return Result.failure(IllegalArgumentException("Invalid administrator username"))

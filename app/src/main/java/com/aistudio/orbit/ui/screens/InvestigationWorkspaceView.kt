@@ -132,6 +132,7 @@ fun InvestigationWorkspaceView(
     var isNodeDetailsOpen by remember { mutableStateOf(false) }
 
     val promptQueue by viewModel.aiCopilotPromptQueue.collectAsState()
+    val useLuxuryBackground by viewModel.settingsRepo.useLuxuryBackground.collectAsState()
     LaunchedEffect(promptQueue) {
         if (promptQueue != null) {
             activeDomain = WorkspaceDomain.AI_COPILOT
@@ -172,7 +173,7 @@ fun InvestigationWorkspaceView(
         gesturesEnabled = true,
         drawerContent = {
             ModalDrawerSheet(
-                modifier = Modifier.fillMaxHeight().width(300.dp)
+                modifier = Modifier.fillMaxHeight().widthIn(min = 260.dp, max = 320.dp).fillMaxWidth(0.88f)
             ) {
                 Spacer(Modifier.height(12.dp))
                 Text(
@@ -258,6 +259,7 @@ fun InvestigationWorkspaceView(
         }
     ) {
         Scaffold(
+            containerColor = if (useLuxuryBackground) Color.Transparent else MaterialTheme.colorScheme.background,
             topBar = {
                 TopAppBar(
                     title = {
@@ -469,8 +471,8 @@ fun InvestigationWorkspaceView(
                         exit = slideOutHorizontally(targetOffsetX = { if (isFa) -it else it }, animationSpec = tween(300)),
                         modifier = Modifier
                             .fillMaxHeight()
-                            .fillMaxWidth(0.85f)
-                            .widthIn(max = 480.dp)
+                            .fillMaxWidth(if (widthClass == com.aistudio.orbit.ui.components.WindowWidthSizeClass.COMPACT) 1f else 0.78f)
+                            .widthIn(max = 460.dp)
                             .align(if (isFa) Alignment.Start else Alignment.End)
                     ) {
                         Surface(
@@ -516,7 +518,7 @@ fun ReportsPanel(case: InvestigationCase, isFa: Boolean, viewModel: Investigatio
 fun NodeDetailsPanel(node: InteractiveCaseNode?, isFa: Boolean, onClose: () -> Unit) {
     Column(modifier = Modifier.padding(16.dp).fillMaxSize()) {
         Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text(if (isFa) "جزئیات ادله (Provenance)" else "Evidence Provenance", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Text(if (isFa) "جزئیات ادله و تبارشناسی" else "Evidence Provenance", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
             IconButton(onClick = onClose) {
                 Icon(Icons.Default.Close, contentDescription = "Close")
             }

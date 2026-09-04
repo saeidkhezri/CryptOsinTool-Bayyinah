@@ -277,7 +277,7 @@ fun OverviewTab(
                 ) {
                     Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Text(
-                            text = if (isPersian) "شاخص‌های خلاصه پرونده (Forensic Indicators)" else "Forensic Summary Indicators",
+                            text = if (isPersian) "شاخص‌های خلاصه پرونده" else "Forensic Summary Indicators",
                             style = MaterialTheme.typography.labelLarge,
                             fontWeight = FontWeight.Bold
                         )

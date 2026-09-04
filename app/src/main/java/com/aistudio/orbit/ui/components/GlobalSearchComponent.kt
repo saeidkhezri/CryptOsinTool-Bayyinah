@@ -105,7 +105,7 @@ fun GlobalSearchComponent(
                 results.add(
                     SearchResultItem(
                         id = "direct_eth_$q",
-                        title = if (isPersian) "آدرس سازگار با اتریوم و توکن‌ها (EVM)" else "Valid Ethereum / EVM Address",
+                        title = if (isPersian) "آدرس معتبر اتریوم و شبکه‌های EVM" else "Valid Ethereum / EVM Address",
                         subtitle = q,
                         type = SearchItemType.ADDRESS,
                         network = BlockchainNetwork.ETHEREUM,
@@ -117,7 +117,7 @@ fun GlobalSearchComponent(
                 results.add(
                     SearchResultItem(
                         id = "direct_tron_$q",
-                        title = if (isPersian) "آدرس شبکه ترون (TRON / USDT TRC-20)" else "Valid TRON Address",
+                        title = if (isPersian) "آدرس معتبر شبکه ترون TRC-20" else "Valid TRON Address",
                         subtitle = q,
                         type = SearchItemType.ADDRESS,
                         network = BlockchainNetwork.TRON,
@@ -132,7 +132,7 @@ fun GlobalSearchComponent(
                 results.add(
                     SearchResultItem(
                         id = "txid_$q",
-                        title = if (isPersian) "شناسه تراکنش بلاک‌چین (TXID)" else "Blockchain Transaction Hash (TXID)",
+                        title = if (isPersian) "شناسه هش تراکنش بلاک‌چین" else "Blockchain Transaction Hash (TXID)",
                         subtitle = q,
                         type = SearchItemType.TRANSACTION_HASH,
                         rawPayload = q

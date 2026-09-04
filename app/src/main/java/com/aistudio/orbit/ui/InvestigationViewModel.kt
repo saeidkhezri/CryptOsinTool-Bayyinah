@@ -587,10 +587,13 @@ class InvestigationViewModel(application: Application) : AndroidViewModel(applic
                     analysisRevision = 1
                 )
 
+                // Publish the case only after all deterministic on-chain acquisition work is complete.
+                // Heavy off-chain/OSINT work is intentionally NOT started here. The 100% progress
+                // dialog must mean the operation represented by it is actually finished, and the
+                // investigator must explicitly start expensive off-chain enrichment from its own stage.
                 _activeCase.value = newCase
-                _osintReport.value = OsintForensicsEngine.performOsintInvestigation(trimmedAddress, network)
+                _osintReport.value = null
                 investigationRepo.saveCase(newCase)
-                runOnChainToOffChainHandoff(trimmedAddress, network)
 
                 // Record into Forensic Audit Trail Service
                 AuditTrailService.recordAddressLookup(
@@ -655,10 +658,11 @@ class InvestigationViewModel(application: Application) : AndroidViewModel(applic
         _osintSeeds.value = listOf(com.aistudio.orbit.forensics.osint.InvestigationPipelineEngine.classifyAndNormalizeInput(investigationCase.targetAddress))
         com.aistudio.orbit.forensics.osint.InvestigationPipelineEngine.setActiveCase(investigationCase.caseId)
         
-        _osintReport.value = OsintForensicsEngine.performOsintInvestigation(investigationCase.targetAddress, investigationCase.network)
+        // Loading a case must be side-effect free. Do not silently start network-heavy OSINT
+        // handoff work just because the user opened a saved case.
+        _osintReport.value = null
         _activeGraph.value = buildVisualGraph(investigationCase.targetAddress, investigationCase.counterparties)
         _selectedNodeId.value = investigationCase.targetAddress
-        runOnChainToOffChainHandoff(investigationCase.targetAddress, investigationCase.network)
         
         // Re-derive analytical modules for loaded case
         _patternMatches.value = CrimePatternEngine.matchPatterns(

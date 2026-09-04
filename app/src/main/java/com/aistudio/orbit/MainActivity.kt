@@ -18,6 +18,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -54,6 +56,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         SecureStorageManager.init(applicationContext)
+        com.aistudio.orbit.security.auth.AuthManager.ensureLocalOwnerSession()
 
         setContent {
             val language by investigationViewModel.settingsRepo.language.collectAsState()
@@ -90,15 +93,36 @@ class MainActivity : ComponentActivity() {
                     themeMode = themeMode,
                     useDynamicColor = useDynamicColor
                 ) {
-                    Box(modifier = Modifier.fillMaxSize()) {
+                    val backgroundInteractionState = remember { com.aistudio.orbit.ui.components.AntigravityInteractionState() }
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .pointerInput(Unit) {
+                                awaitPointerEventScope {
+                                    while (true) {
+                                        val event = awaitPointerEvent(PointerEventPass.Initial)
+                                        val changes = event.changes
+                                        if (changes.isNotEmpty()) {
+                                            val lastChange = changes.last()
+                                            if (lastChange.pressed) {
+                                                backgroundInteractionState.touchPosition = lastChange.position
+                                                if (lastChange.previousPressed == false) {
+                                                    backgroundInteractionState.lastClickPosition = lastChange.position
+                                                    backgroundInteractionState.clickTrigger = (backgroundInteractionState.clickTrigger + 1) % 1000
+                                                }
+                                            } else {
+                                                backgroundInteractionState.touchPosition = null
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                    ) {
                         if (useLuxuryBackground) {
-                            androidx.compose.foundation.Image(
-                                painter = androidx.compose.ui.res.painterResource(
-                                    id = if (themeMode == ThemeMode.DARK) com.aistudio.orbit.R.drawable.bg_dark_node else com.aistudio.orbit.R.drawable.bg_light_node
-                                ),
-                                contentDescription = null,
-                                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
-                                modifier = Modifier.fillMaxSize()
+                            com.aistudio.orbit.ui.components.AntigravityNodeBackground(
+                                isDark = (themeMode == ThemeMode.DARK),
+                                interactionState = backgroundInteractionState
                             )
                         }
                         
@@ -120,6 +144,7 @@ class MainActivity : ComponentActivity() {
 
                             Scaffold(
                                 modifier = Modifier.fillMaxSize(),
+                                containerColor = if (useLuxuryBackground) Color.Transparent else MaterialTheme.colorScheme.background,
                                 topBar = {
                                     OrbitTopAppBar(
                                         title = strings.appTitle,
