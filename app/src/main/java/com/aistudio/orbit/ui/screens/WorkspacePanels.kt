@@ -11,6 +11,8 @@ import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -120,11 +122,10 @@ fun OverviewTab(
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.outline
                             )
-                            @OptIn(ExperimentalLayoutApi::class)
-                            FlowRow(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            Row(
+                                modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
                                 listOf(
                                     Pair(null, if (isPersian) "همه زمان‌ها" else "All Time"),
@@ -136,61 +137,59 @@ fun OverviewTab(
                                     FilterChip(
                                         selected = isSelected,
                                         onClick = { dateFilterDays = days },
-                                        label = { Text(label, fontSize = 11.sp) }
+                                        label = { Text(label, fontSize = 11.sp, maxLines = 1) },
+                                        modifier = Modifier.height(32.dp)
                                     )
                                 }
                             }
                         }
 
-                        @OptIn(ExperimentalLayoutApi::class)
-                        FlowRow(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        Row(
+                            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
                                 Text(
-                                    text = if (isPersian) "حداقل شدت ریسک:" else "Min Risk Severity:",
+                                    text = if (isPersian) "ریسک:" else "Risk:",
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.outline
                                 )
-                                FlowRow(
-                                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                                ) {
-                                    listOf(
-                                        Pair(null, if (isPersian) "همه" else "ALL"),
-                                        Pair(RiskSeverity.MEDIUM, if (isPersian) "متوسط+" else "MED+"),
-                                        Pair(RiskSeverity.HIGH, if (isPersian) "بالا+" else "HIGH+")
-                                    ).forEach { (sev, label) ->
-                                        val isSelected = minSeverity == sev
-                                        FilterChip(
-                                            selected = isSelected,
-                                            onClick = { minSeverity = sev },
-                                            label = { Text(label, fontSize = 10.sp) }
-                                        )
-                                    }
+                                listOf(
+                                    Pair(null, if (isPersian) "همه" else "ALL"),
+                                    Pair(RiskSeverity.MEDIUM, if (isPersian) "متوسط+" else "MED+"),
+                                    Pair(RiskSeverity.HIGH, if (isPersian) "بالا+" else "HIGH+")
+                                ).forEach { (sev, label) ->
+                                    val isSelected = minSeverity == sev
+                                    FilterChip(
+                                        selected = isSelected,
+                                        onClick = { minSeverity = sev },
+                                        label = { Text(label, fontSize = 10.sp, maxLines = 1) },
+                                        modifier = Modifier.height(30.dp)
+                                    )
                                 }
                             }
 
-                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
                                 Text(
-                                    text = if (isPersian) "حداقل مبلغ تراکنش (${investigationCase.network.symbol}):" else "Min Amount (${investigationCase.network.symbol}):",
+                                    text = if (isPersian) "مبلغ (${investigationCase.network.symbol}):" else "Min (${investigationCase.network.symbol}):",
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.outline
                                 )
-                                FlowRow(
-                                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                                ) {
-                                    listOf(0.0, 0.1, 1.0).forEach { amt ->
-                                        val isSelected = minBtcAmount == amt
-                                        FilterChip(
-                                            selected = isSelected,
-                                            onClick = { minBtcAmount = amt },
-                                            label = { Text(if (amt == 0.0) (if (isPersian) "همه مبالغ" else "0.0") else "$amt ${investigationCase.network.symbol}", fontSize = 10.sp) }
-                                        )
-                                    }
+                                listOf(0.0, 0.1, 1.0).forEach { amt ->
+                                    val isSelected = minBtcAmount == amt
+                                    FilterChip(
+                                        selected = isSelected,
+                                        onClick = { minBtcAmount = amt },
+                                        label = { Text(if (amt == 0.0) (if (isPersian) "همه" else "0.0") else "$amt", fontSize = 10.sp, maxLines = 1) },
+                                        modifier = Modifier.height(30.dp)
+                                    )
                                 }
                             }
                         }

@@ -205,25 +205,27 @@ fun DashboardView(
                                 )
                             }
 
-                            FilledTonalButton(
+                            Button(
                                 onClick = onNavigateToOsint,
-                                colors = ButtonDefaults.filledTonalButtonColors(
-                                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.secondary,
+                                    contentColor = MaterialTheme.colorScheme.onSecondary
                                 ),
                                 shape = ForensicShapes.md,
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
                                 modifier = Modifier
                                     .weight(1f)
                                     .heightIn(min = ForensicTouchTarget.minSize)
                             ) {
                                 Icon(Icons.Default.TravelExplore, contentDescription = null, modifier = Modifier.size(18.dp))
-                                Spacer(modifier = Modifier.width(ForensicSpacing.xs))
+                                Spacer(modifier = Modifier.width(4.dp))
                                 Text(
                                     text = if (isPersian) "سامانه OSINT" else "OSINT Hub",
                                     fontWeight = FontWeight.Bold,
-                                    style = MaterialTheme.typography.labelLarge,
+                                    style = MaterialTheme.typography.labelMedium,
                                     maxLines = 1,
-                                    overflow = TextOverflow.Clip
+                                    softWrap = false,
+                                    overflow = TextOverflow.Visible
                                 )
                             }
                         }

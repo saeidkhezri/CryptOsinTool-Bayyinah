@@ -56,6 +56,7 @@ fun NewInvestigationView(
     var notes by remember { mutableStateOf("") }
     var queryLimit by remember { mutableIntStateOf(50) }
     var searchDepth by remember { mutableIntStateOf(1) }
+    var selectedMode by remember { mutableStateOf(com.aistudio.orbit.model.ExperienceMode.GUIDED_INVESTIGATION) }
 
     // Date Range Selection State
     var dateRangeType by remember { mutableStateOf(InvestigationDateRangeType.ENTIRE_HISTORY) }
@@ -81,7 +82,7 @@ fun NewInvestigationView(
         LazyColumn(
             modifier = Modifier
                 .fillMaxHeight()
-                .widthIn(max = 880.dp)
+                .widthIn(max = 640.dp)
                 .fillMaxWidth()
                 .padding(horizontal = if (maxWidth < 600.dp) 12.dp else 20.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -195,82 +196,98 @@ fun NewInvestigationView(
                 }
             }
 
-            // Target Address Input & Live Validation
+            // Target Address Input & Live Validation (wrapped in a beautiful Card to prevent stretching and form a beautiful box)
             item {
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    OutlinedTextField(
-                        value = targetAddress,
-                        onValueChange = { targetAddress = it },
-                        label = { Text(strings.targetAddressLabel) },
-                        placeholder = { Text(if (isPersian) "آدرس عمومی (مثلاً: 1A1zP1e... یا 0x... یا T...)" else "Public address (e.g. 1A1zP1... or 0x... or T...)") },
-                        leadingIcon = { Icon(Icons.Default.QrCodeScanner, contentDescription = null) },
-                        trailingIcon = {
-                            if (targetAddress.isNotBlank()) {
-                                IconButton(onClick = { targetAddress = "" }) {
-                                    Icon(Icons.Default.Clear, contentDescription = "Clear")
-                                }
-                            }
-                        },
-                        isError = validationResult != null && !validationResult.isValid,
-                        supportingText = {
-                            if (validationResult != null) {
-                                if (validationResult.isValid) {
-                                    Text(
-                                        text = "✓ ${AddressValidator.getAddressTypeLabel(validationResult.addressType, isPersian)}",
-                                        color = Color(0xFF16A34A),
-                                        fontWeight = FontWeight.SemiBold
-                                    )
-                                } else {
-                                    Text(
-                                        text = validationResult.errorReason ?: "Invalid format",
-                                        color = MaterialTheme.colorScheme.error
-                                    )
-                                }
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp)
-                    )
-
-                    // Responsive Quick-Fill Sample Chips
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Card(
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
                         Text(
-                            text = if (isPersian) "آدرس‌های نمونه جهت تست:" else "Sample Addresses for Verification:",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.outline
+                            text = if (isPersian) "هدف و آدرس تحت تحقیق" else "Investigation Target Address",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
                         )
-                        FlowRow(
-                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            SuggestionChip(
-                                onClick = {
-                                    targetAddress = "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa"
-                                    selectedNetwork = BlockchainNetwork.BITCOIN
-                                },
-                                label = { Text("BTC Genesis", fontSize = 11.sp) }
+
+                        OutlinedTextField(
+                            value = targetAddress,
+                            onValueChange = { targetAddress = it },
+                            label = { Text(strings.targetAddressLabel) },
+                            placeholder = { Text(if (isPersian) "آدرس عمومی (مثلاً: 1A1zP1e... یا 0x... یا T...)" else "Public address (e.g. 1A1zP1... or 0x... or T...)") },
+                            leadingIcon = { Icon(Icons.Default.QrCodeScanner, contentDescription = null) },
+                            trailingIcon = {
+                                if (targetAddress.isNotBlank()) {
+                                    IconButton(onClick = { targetAddress = "" }) {
+                                        Icon(Icons.Default.Clear, contentDescription = "Clear")
+                                    }
+                                }
+                            },
+                            isError = validationResult != null && !validationResult.isValid,
+                            supportingText = {
+                                if (validationResult != null) {
+                                    if (validationResult.isValid) {
+                                        Text(
+                                            text = "✓ ${AddressValidator.getAddressTypeLabel(validationResult.addressType, isPersian)}",
+                                            color = Color(0xFF16A34A),
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                    } else {
+                                        Text(
+                                            text = validationResult.errorReason ?: "Invalid format",
+                                            color = MaterialTheme.colorScheme.error
+                                        )
+                                    }
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp)
+                        )
+
+                        // Responsive Quick-Fill Sample Chips
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text(
+                                text = if (isPersian) "آدرس‌های نمونه جهت تست سریع:" else "Sample Addresses for Fast Testing:",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.outline
                             )
-                            SuggestionChip(
-                                onClick = {
-                                    targetAddress = "0xdAC17F958D2ee523a2206206994597C13D831ec7"
-                                    selectedNetwork = BlockchainNetwork.ETHEREUM
-                                },
-                                label = { Text("USDT ERC20", fontSize = 11.sp) }
-                            )
-                            SuggestionChip(
-                                onClick = {
-                                    targetAddress = "TR7NHqJEKQxGTCi8q8ZY4pL8otSzgjLj6t"
-                                    selectedNetwork = BlockchainNetwork.TRON
-                                },
-                                label = { Text("USDT TRC20", fontSize = 11.sp) }
-                            )
-                            SuggestionChip(
-                                onClick = {
-                                    targetAddress = "0x55d398326f99059fF775485246999027B3197955"
-                                    selectedNetwork = BlockchainNetwork.BNB_CHAIN
-                                },
-                                label = { Text("USDT BSC", fontSize = 11.sp) }
-                            )
+                            FlowRow(
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                SuggestionChip(
+                                    onClick = {
+                                        targetAddress = "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa"
+                                        selectedNetwork = BlockchainNetwork.BITCOIN
+                                    },
+                                    label = { Text("BTC Genesis", fontSize = 11.sp) }
+                                )
+                                SuggestionChip(
+                                    onClick = {
+                                        targetAddress = "0xdAC17F958D2ee523a2206206994597C13D831ec7"
+                                        selectedNetwork = BlockchainNetwork.ETHEREUM
+                                    },
+                                    label = { Text("USDT ERC20", fontSize = 11.sp) }
+                                )
+                                SuggestionChip(
+                                    onClick = {
+                                        targetAddress = "TR7NHqJEKQxGTCi8q8ZY4pL8otSzgjLj6t"
+                                        selectedNetwork = BlockchainNetwork.TRON
+                                    },
+                                    label = { Text("USDT TRC20", fontSize = 11.sp) }
+                                )
+                                SuggestionChip(
+                                    onClick = {
+                                        targetAddress = "0x55d398326f99059fF775485246999027B3197955"
+                                        selectedNetwork = BlockchainNetwork.BNB_CHAIN
+                                    },
+                                    label = { Text("USDT BSC", fontSize = 11.sp) }
+                                )
+                            }
                         }
                     }
                 }
@@ -502,90 +519,138 @@ fun NewInvestigationView(
                 }
             }
 
-            // Action Buttons
+            // Experience Mode Selector Section (resolves the 3 modes vs 2 buttons layout inconsistency beautifully)
             item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                Card(
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Button(
-                        onClick = {
-                            viewModel.setExperienceMode(com.aistudio.orbit.model.ExperienceMode.QUICK_CHECK)
-                            viewModel.startNewInvestigation(
-                                referenceNumber = referenceNumber,
-                                caseTitle = caseTitle,
-                                targetAddress = targetAddress,
-                                network = selectedNetwork,
-                                scopeDescription = scopeDescription,
-                                notes = notes,
-                                tags = listOf("STAGE-2", selectedNetwork.name),
-                                searchDepth = searchDepth,
-                                queryLimit = queryLimit
+                    Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text(
+                            text = if (isPersian) "حالت اجرای تحقیق و ردیابی مالی" else "Investigation Experience Mode",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            val modesList = listOf(
+                                Triple(
+                                    com.aistudio.orbit.model.ExperienceMode.QUICK_CHECK,
+                                    if (isPersian) "بررسی سریع (Quick Check)" else "Quick Check",
+                                    if (isPersian) "تحلیل سریع ریسک و انتساب بدون تشکیل پرونده سنگین" else "Fast risk and attribution summary for a single lead"
+                                ),
+                                Triple(
+                                    com.aistudio.orbit.model.ExperienceMode.GUIDED_INVESTIGATION,
+                                    if (isPersian) "تحقیق هدایت‌شده (Guided)" else "Guided Investigation",
+                                    if (isPersian) "راهنمایی گام‌به‌گام از تایید ورودی تا ثبت ادله و گزارش نهایی" else "Step-by-step guided workflow with structured checkpoints"
+                                ),
+                                Triple(
+                                    com.aistudio.orbit.model.ExperienceMode.ANALYST_WORKSPACE,
+                                    if (isPersian) "محیط جامع کارشناس (Workspace)" else "Analyst Workspace",
+                                    if (isPersian) "دسترسی آزاد به تمام پکیج‌های فارنزیک، گراف تعاملی و ممیزی ادله" else "Unrestricted, non-linear access to full forensic suite and tools"
+                                )
                             )
-                            onInvestigationStarted()
-                        },
-                        enabled = !isLoading && (validationResult?.isValid == true || targetAddress.isNotBlank()),
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(52.dp),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        if (isLoading) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(20.dp),
-                                color = MaterialTheme.colorScheme.onPrimary,
-                                strokeWidth = 2.5.dp
-                            )
-                        } else {
-                            Text(
-                                text = if (isPersian) "بررسی سریع" else "Quick Check",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                textAlign = TextAlign.Center
-                            )
+
+                            modesList.forEach { (mode, title, desc) ->
+                                val isSelected = selectedMode == mode
+                                Surface(
+                                    onClick = { selectedMode = mode },
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerLow,
+                                    border = androidx.compose.foundation.BorderStroke(
+                                        width = 1.5.dp,
+                                        color = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent
+                                    ),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(12.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                    ) {
+                                        RadioButton(
+                                            selected = isSelected,
+                                            onClick = { selectedMode = mode }
+                                        )
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                text = title,
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                fontWeight = FontWeight.Bold,
+                                                color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
+                                            )
+                                            Spacer(modifier = Modifier.height(2.dp))
+                                            Text(
+                                                text = desc,
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                        Icon(
+                                            imageVector = when (mode) {
+                                                com.aistudio.orbit.model.ExperienceMode.QUICK_CHECK -> Icons.Default.Bolt
+                                                com.aistudio.orbit.model.ExperienceMode.GUIDED_INVESTIGATION -> Icons.Default.Explore
+                                                com.aistudio.orbit.model.ExperienceMode.ANALYST_WORKSPACE -> Icons.Default.Layers
+                                            },
+                                            contentDescription = null,
+                                            tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
+                }
+            }
 
-                    Button(
-                        onClick = {
-                            viewModel.setExperienceMode(com.aistudio.orbit.model.ExperienceMode.GUIDED_INVESTIGATION)
-                            viewModel.startNewInvestigation(
-                                referenceNumber = referenceNumber,
-                                caseTitle = caseTitle,
-                                targetAddress = targetAddress,
-                                network = selectedNetwork,
-                                scopeDescription = scopeDescription,
-                                notes = notes,
-                                tags = listOf("STAGE-2", selectedNetwork.name),
-                                searchDepth = searchDepth,
-                                queryLimit = queryLimit
-                            )
-                            onInvestigationStarted()
-                        },
-                        enabled = !isLoading && (validationResult?.isValid == true || targetAddress.isNotBlank()),
-                        modifier = Modifier
-                            .weight(1.5f)
-                            .height(52.dp),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        if (isLoading) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(20.dp),
-                                color = MaterialTheme.colorScheme.onPrimary,
-                                strokeWidth = 2.5.dp
-                            )
-                            Spacer(modifier = Modifier.width(10.dp))
-                            Text(text = loadingMsg, fontSize = 14.sp)
-                        } else {
-                            Icon(Icons.Default.Search, contentDescription = null)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = if (isPersian) "پرونده هدایت‌شده" else "Guided Investigation",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                textAlign = TextAlign.Center
-                            )
+            // Action Buttons
+            item {
+                Button(
+                    onClick = {
+                        viewModel.setExperienceMode(selectedMode)
+                        viewModel.startNewInvestigation(
+                            referenceNumber = referenceNumber,
+                            caseTitle = caseTitle,
+                            targetAddress = targetAddress,
+                            network = selectedNetwork,
+                            scopeDescription = scopeDescription,
+                            notes = notes,
+                            tags = listOf("STAGE-2", selectedNetwork.name),
+                            searchDepth = searchDepth,
+                            queryLimit = queryLimit
+                        )
+                        onInvestigationStarted()
+                    },
+                    enabled = !isLoading && (validationResult?.isValid == true || targetAddress.isNotBlank()),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(54.dp),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    if (isLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            color = MaterialTheme.colorScheme.onPrimary,
+                            strokeWidth = 2.5.dp
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Text(text = loadingMsg, fontSize = 14.sp)
+                    } else {
+                        val startText = when (selectedMode) {
+                            com.aistudio.orbit.model.ExperienceMode.QUICK_CHECK -> if (isPersian) "شروع بررسی سریع آدرس" else "Initialize Quick Check"
+                            com.aistudio.orbit.model.ExperienceMode.GUIDED_INVESTIGATION -> if (isPersian) "شروع تحقیق هدایت‌شده پرونده" else "Initialize Guided Investigation"
+                            com.aistudio.orbit.model.ExperienceMode.ANALYST_WORKSPACE -> if (isPersian) "ورود به محیط جامع کارشناسی" else "Initialize Analyst Workspace"
                         }
+                        Icon(Icons.Default.PlayArrow, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = startText,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            textAlign = TextAlign.Center
+                        )
                     }
                 }
             }
