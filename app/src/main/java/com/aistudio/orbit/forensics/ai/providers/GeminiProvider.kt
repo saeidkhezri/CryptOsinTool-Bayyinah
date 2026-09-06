@@ -5,6 +5,8 @@ import com.google.ai.client.generativeai.type.GenerateContentResponse
 import com.google.ai.client.generativeai.type.generationConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.RequestBody.Companion.toRequestBody
 
 class GeminiProvider : AiProvider {
     override val name: String = "Google Gemini"
@@ -15,6 +17,11 @@ class GeminiProvider : AiProvider {
     )
     override val providerType: AiProviderType = AiProviderType.GEMINI
     override val costCategory: String = "Usage-based"
+
+    private val httpClient = okhttp3.OkHttpClient.Builder()
+        .connectTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+        .readTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
+        .build()
 
     override suspend fun testConnection(apiKey: String, endpoint: String?): Boolean = withContext(Dispatchers.IO) {
         try {
@@ -102,6 +109,105 @@ class GeminiProvider : AiProvider {
                 executionDurationMs = System.currentTimeMillis() - startTime,
                 errorMessage = e.message ?: "Unknown execution error"
             )
+        }
+    }
+
+    /**
+     * Executes prompt with Google Search Grounding enabled using gemini-3.5-flash.
+     * Retrieves up-to-date live intelligence directly from Google Search.
+     */
+    suspend fun executeSearchGroundedPrompt(
+        prompt: String,
+        apiKey: String,
+        modelName: String = "gemini-3.5-flash",
+        temperature: Float = 0.2f
+    ): AiExecutionResult = withContext(Dispatchers.IO) {
+        val startTime = System.currentTimeMillis()
+        if (apiKey.isBlank()) {
+            return@withContext AiExecutionResult(
+                status = AiOutputStatus.AUTH_FAILED,
+                output = null,
+                modelUsed = modelName,
+                provider = providerType,
+                promptVersion = "1.0",
+                executionDurationMs = System.currentTimeMillis() - startTime,
+                errorMessage = "API Key is missing"
+            )
+        }
+
+        try {
+            val url = "https://generativelanguage.googleapis.com/v1beta/models/$modelName:generateContent?key=$apiKey"
+            val requestJson = org.json.JSONObject().apply {
+                val contentsArray = org.json.JSONArray().apply {
+                    val contentObj = org.json.JSONObject().apply {
+                        val partsArray = org.json.JSONArray().apply {
+                            put(org.json.JSONObject().put("text", prompt))
+                        }
+                        put("parts", partsArray)
+                    }
+                    put(contentObj)
+                }
+                put("contents", contentsArray)
+
+                val toolsArray = org.json.JSONArray().apply {
+                    put(org.json.JSONObject().put("google_search", org.json.JSONObject()))
+                }
+                put("tools", toolsArray)
+
+                val configObj = org.json.JSONObject().apply {
+                    put("temperature", temperature)
+                }
+                put("generationConfig", configObj)
+            }
+
+            val mediaType = "application/json; charset=utf-8".toMediaType()
+            val body = requestJson.toString().toRequestBody(mediaType)
+            val request = okhttp3.Request.Builder()
+                .url(url)
+                .post(body)
+                .build()
+
+            val response = httpClient.newCall(request).execute()
+            val respString = response.body?.string().orEmpty()
+
+            if (!response.isSuccessful) {
+                // Fallback to standard prompt execution if tool not supported on this endpoint
+                return@withContext executePrompt(prompt, apiKey, modelName, temperature = temperature)
+            }
+
+            val respObj = org.json.JSONObject(respString)
+            val candidates = respObj.optJSONArray("candidates")
+            if (candidates != null && candidates.length() > 0) {
+                val firstCandidate = candidates.getJSONObject(0)
+                val content = firstCandidate.optJSONObject("content")
+                val parts = content?.optJSONArray("parts")
+                val text = parts?.optJSONObject(0)?.optString("text")
+
+                // Extract grounding search metadata if present
+                val groundingMetadata = firstCandidate.optJSONObject("groundingMetadata")
+                val searchQueries = groundingMetadata?.optJSONArray("webSearchQueries")
+                val searchNotes = if (searchQueries != null && searchQueries.length() > 0) {
+                    val qList = (0 until searchQueries.length()).map { searchQueries.getString(it) }
+                    "\n[Google Search Grounding Queries: ${qList.joinToString(", ")}]"
+                } else ""
+
+                if (!text.isNullOrBlank()) {
+                    return@withContext AiExecutionResult(
+                        status = AiOutputStatus.SUCCESS,
+                        output = text + searchNotes,
+                        modelUsed = modelName,
+                        provider = providerType,
+                        promptVersion = "1.0-grounded",
+                        executionDurationMs = System.currentTimeMillis() - startTime
+                    )
+                }
+            }
+
+            // Fallback
+            executePrompt(prompt, apiKey, modelName, temperature = temperature)
+        } catch (e: Exception) {
+            // Fallback to standard executePrompt
+            executePrompt(prompt, apiKey, modelName, temperature = temperature)
         }
     }
 }

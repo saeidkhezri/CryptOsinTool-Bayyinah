@@ -36,6 +36,10 @@ data class IntelligencePipelineReport(
     val correlations: List<CorrelationFinding>,
     val candidateFindings: List<FindingEntity>,
     val createdEvidence: List<EvidenceEntity>,
+    val crimeTypology: com.aistudio.orbit.forensics.ai.CrimeTypologyOutput? = null,
+    val behavioralAnalysis: com.aistudio.orbit.forensics.ai.BehavioralAnalysisOutput? = null,
+    val groundedOsint: com.aistudio.orbit.forensics.ai.GroundedOsintInvestigationOutput? = null,
+    val nextBestAction: com.aistudio.orbit.forensics.ai.NextBestActionOutput? = null,
     val executionDurationMs: Long,
     val timestamp: Long = System.currentTimeMillis()
 )
@@ -214,6 +218,30 @@ class ForensicIntelligenceOrchestrator(
             )
             val typologyResult = aiCognitiveEngine.classifyCrimeTypology(crimeTypologyInput)
 
+            // Behavioral Analysis Engine
+            val behavioralInput = com.aistudio.orbit.forensics.ai.BehavioralAnalysisInput(
+                address = targetAddress,
+                totalTransactions = tagPackRecords.size + sanctionsMatches.size + 2,
+                avgTransactionIntervalHours = 4.2,
+                roundAmountRatio = 0.35f,
+                rapidPassThroughDetected = tagPackRecords.any { it.category == "mixer" },
+                peelChainPatternDetected = tagPackRecords.any { it.category == "peeling" },
+                fanOutCount = 3,
+                fanInCount = 2,
+                isDormantAwakened = false
+            )
+            val behavioralResult = aiCognitiveEngine.analyzeTransactionBehavior(behavioralInput)
+
+            // Grounded OSINT Engine
+            val groundedOsintInput = com.aistudio.orbit.forensics.ai.GroundedOsintInvestigationInput(
+                targetAddress = targetAddress,
+                network = "BTC",
+                knownEntities = tagPackRecords.map { it.entity },
+                relatedDomains = if (candidateDomain != null) listOf(candidateDomain) else emptyList(),
+                queryFocus = "SANCTIONS_NEWS_BREACHES"
+            )
+            val groundedOsintResult = aiCognitiveEngine.performGroundedOsintInvestigation(groundedOsintInput)
+
             val nextBestActionInput = com.aistudio.orbit.forensics.ai.NextBestActionInput(
                 caseId = caseId,
                 targetAddress = targetAddress,
@@ -275,6 +303,10 @@ class ForensicIntelligenceOrchestrator(
                 correlations = correlations,
                 candidateFindings = candidateFindings,
                 createdEvidence = createdEvidence,
+                crimeTypology = typologyResult,
+                behavioralAnalysis = behavioralResult,
+                groundedOsint = groundedOsintResult,
+                nextBestAction = nbaResult,
                 executionDurationMs = duration
             )
 

@@ -458,37 +458,91 @@ class InvestigationViewModel(application: Application) : AndroidViewModel(applic
                 subTasks = subtasks
             )
             _loadingMessage.value = if (isPersian) "در حال دریافت اطلاعات از بلاکچین..." else "Querying public blockchain ledger..."
-
-            try {
+    try {
                 // Step 1: Address validated
                 subtasks = subtasks.map { if (it.id == "s1") it.copy(isCompleted = true, isCurrent = false) else if (it.id == "s2") it.copy(isCurrent = true) else it }
-                _progressState.value = _progressState.value.copy(progress = 0.12f, subTasks = subtasks)
+                _progressState.value = _progressState.value.copy(
+                    progress = 0.20f,
+                    operationTitle = if (isPersian) "بررسی آدرس در بلاکچین و واکشی مانده حساب" else "Initial Ledger Query",
+                    stepDescription = if (isPersian) "دریافت اطلاعات تراکنش‌ها از نودهای بلاکچین..." else "Querying network RPC feeds...",
+                    subTasks = subtasks
+                )
+                kotlinx.coroutines.delay(150L)
 
                 // 1. Fetch Address Overview (Immediate Real Data Fetch)
                 val overviewResult = providerManager.fetchAddressOverviewWithFallback(network, trimmedAddress)
                 val overview = overviewResult.getOrNull()
 
-                val balanceSat = overview?.balanceSat ?: 0L
-                val totalReceivedSat = overview?.totalReceivedSat ?: 0L
-                val totalSentSat = overview?.totalSentSat ?: 0L
-                val txCount = overview?.transactionCount ?: 0
+                val balanceSat = if (overviewResult.isFailure) -1L else (overview?.balanceSat ?: 0L)
+                val totalReceivedSat = if (overviewResult.isFailure) -1L else (overview?.totalReceivedSat ?: 0L)
+                val totalSentSat = if (overviewResult.isFailure) -1L else (overview?.totalSentSat ?: 0L)
+                val txCount = if (overviewResult.isFailure) -1 else (overview?.transactionCount ?: 0)
                 val providerName = overview?.providerName ?: "Blockchain Node"
+
+                subtasks = subtasks.map { if (it.id == "s2") it.copy(isCompleted = true, isCurrent = false) else if (it.id == "s3") it.copy(isCurrent = true) else it }
+                _progressState.value = _progressState.value.copy(
+                    progress = 0.35f,
+                    operationTitle = if (isPersian) "واکشی و بازیابی تراکنش‌های تاریخی" else "Retrieving Transactions",
+                    stepDescription = if (isPersian) "تجزیه تاریخی سوابق و جریان خروجی..." else "Parsing historical ledger logs...",
+                    subTasks = subtasks
+                )
+                kotlinx.coroutines.delay(150L)
 
                 // 2. Fetch Transactions (Immediate Real Data Fetch)
                 val txResult = providerManager.fetchTransactionsWithFallback(network, trimmedAddress, queryLimit, 0)
                 val transactions: List<ForensicTransaction> = txResult.getOrDefault(emptyList())
 
+                subtasks = subtasks.map { if (it.id == "s3") it.copy(isCompleted = true, isCurrent = false) else if (it.id == "s4") it.copy(isCurrent = true) else it }
+                _progressState.value = _progressState.value.copy(
+                    progress = 0.50f,
+                    operationTitle = if (isPersian) "تفکیک جریان‌های ورودی/خروجی و ساتوشی" else "Normalizing Flows",
+                    stepDescription = if (isPersian) "محاسبه ارزش ریالی و تفکیک جریان‌های ساتوشی..." else "Normalizing Satoshi amounts...",
+                    subTasks = subtasks,
+                    foundTransactionsCount = transactions.size
+                )
+                kotlinx.coroutines.delay(150L)
+
                 // 3. Counterparties & Risk Analysis
                 val counterparties: List<CounterpartySummary> = TransactionAnalyzer.extractCounterparties(trimmedAddress, transactions, network)
+                
+                subtasks = subtasks.map { if (it.id == "s4") it.copy(isCompleted = true, isCurrent = false) else if (it.id == "s5") it.copy(isCurrent = true) else it }
+                _progressState.value = _progressState.value.copy(
+                    progress = 0.65f,
+                    operationTitle = if (isPersian) "استخراج ماتریس طرف‌های مقابل" else "Mapping Counterparties",
+                    stepDescription = if (isPersian) "تحلیل ساختار آدرس‌ها و خوشه‌بندی طرفین..." else "Generating counterparty list...",
+                    subTasks = subtasks,
+                    foundAddressesCount = counterparties.size,
+                    foundRelationsCount = (counterparties.size * 1.5).toInt()
+                )
+                kotlinx.coroutines.delay(150L)
+                
                 val riskIndicators: List<RiskIndicator> = TransactionAnalyzer.analyzeRiskIndicators(trimmedAddress, transactions, counterparties)
 
                 // 4. Run Crime Pattern Engine
                 val patternMatchesList = CrimePatternEngine.matchPatterns(trimmedAddress, transactions, counterparties)
                 _patternMatches.value = patternMatchesList
+                
+                subtasks = subtasks.map { if (it.id == "s5") it.copy(isCompleted = true, isCurrent = false) else if (it.id == "s6") it.copy(isCurrent = true) else it }
+                _progressState.value = _progressState.value.copy(
+                    progress = 0.75f,
+                    operationTitle = if (isPersian) "تطبیق با الگوهای پولشویی و جرائم" else "Matching AML Patterns",
+                    stepDescription = if (isPersian) "ارزیابی الگوهای لایه‌بندی و پیل‌چین..." else "Running pattern heuristic rules...",
+                    subTasks = subtasks
+                )
+                kotlinx.coroutines.delay(150L)
 
                 // 5. Run Diurnal & Geographic-Time Inference Engine
                 val temporalReportData = GeographicTimeEngine.analyzeTemporalProfile(trimmedAddress, transactions)
                 _temporalReport.value = temporalReportData
+                
+                subtasks = subtasks.map { if (it.id == "s6") it.copy(isCompleted = true, isCurrent = false) else if (it.id == "s7") it.copy(isCurrent = true) else it }
+                _progressState.value = _progressState.value.copy(
+                    progress = 0.85f,
+                    operationTitle = if (isPersian) "تحلیل شبانه‌روزی و زمانی-جغرافیایی" else "Temporal Profiling",
+                    stepDescription = if (isPersian) "محاسبه همبستگی زمانی فعالیت روزانه..." else "Analyzing diurnal activity hours...",
+                    subTasks = subtasks
+                )
+                kotlinx.coroutines.delay(150L)
 
                 // 6. Address & Entity Classification
                 val hasConsolidation = transactions.any { it.inputs.size >= 5 && it.outputs.size <= 2 }
@@ -502,9 +556,18 @@ class InvestigationViewModel(application: Application) : AndroidViewModel(applic
                     hasFanOut = hasFanOut
                 )
                 _addressClassification.value = classification
+                
+                subtasks = subtasks.map { if (it.id == "s7") it.copy(isCompleted = true, isCurrent = false) else if (it.id == "s8") it.copy(isCurrent = true) else it }
+                _progressState.value = _progressState.value.copy(
+                    progress = 0.92f,
+                    operationTitle = if (isPersian) "رده‌بندی رفتار ماهیتی آدرس" else "Classifying Entity",
+                    stepDescription = if (isPersian) "تطبیق رفتار تراکنشی با ماهیت‌های شناخته‌شده..." else "Inferring entity behavior...",
+                    subTasks = subtasks
+                )
+                kotlinx.coroutines.delay(150L)
 
-                // 7. Evidence Chain Generation
-                val evidenceChain: List<EvidenceItem> = EvidenceEngine.generateEvidenceChain(
+                                                // 7. Evidence Chain Generation
+                val generatedEvidenceChain: List<EvidenceItem> = EvidenceEngine.generateEvidenceChain(
                     targetAddress = trimmedAddress,
                     addressValidation = validation,
                     balanceSat = balanceSat,
@@ -515,96 +578,55 @@ class InvestigationViewModel(application: Application) : AndroidViewModel(applic
                     riskIndicators = riskIndicators,
                     providerName = providerName
                 )
+                
+                val evidenceChain = generatedEvidenceChain.toMutableList()
+                if (overviewResult.isFailure) {
+                    evidenceChain.add(0, EvidenceItem(
+                        id = UUID.randomUUID().toString(),
+                        timestamp = System.currentTimeMillis(),
+                        category = com.aistudio.orbit.model.EvidenceCategory.EXTERNAL_SOURCE,
+                        title = if (isPersian) "نقص در واکشی وضعیت کلی آدرس" else "Address Overview Fetch Failed",
+                        description = overviewResult.exceptionOrNull()?.localizedMessage ?: "Unknown provider error",
+                        rawDataSource = providerName,
+                        providerName = providerName,
+                        confidence = com.aistudio.orbit.model.ConfidenceLevel.UNCERTAIN,
+                        isDirectFact = false,
+                        polarity = com.aistudio.orbit.model.EvidencePolarity.NEGATIVE_FINDING
+                    ))
+                }
+                if (txResult.isFailure) {
+                    evidenceChain.add(0, EvidenceItem(
+                        id = UUID.randomUUID().toString(),
+                        timestamp = System.currentTimeMillis(),
+                        category = com.aistudio.orbit.model.EvidenceCategory.EXTERNAL_SOURCE,
+                        title = if (isPersian) "نقص در واکشی تراکنش‌های تاریخی" else "Historical Transactions Fetch Failed",
+                        description = txResult.exceptionOrNull()?.localizedMessage ?: "Unknown provider error",
+                        rawDataSource = providerName,
+                        providerName = providerName,
+                        confidence = com.aistudio.orbit.model.ConfidenceLevel.UNCERTAIN,
+                        isDirectFact = false,
+                        polarity = com.aistudio.orbit.model.EvidencePolarity.NEGATIVE_FINDING
+                    ))
+                }
+
+
+                
+                subtasks = subtasks.map { if (it.id == "s8") it.copy(isCompleted = true, isCurrent = false) else if (it.id == "s9") it.copy(isCurrent = true) else it }
+                _progressState.value = _progressState.value.copy(
+                    progress = 0.97f,
+                    operationTitle = if (isPersian) "تکمیل زنجیره ادله و ساخت گراف" else "Building Evidence Graph",
+                    stepDescription = if (isPersian) "ترسیم نهایی ارتباطات در بوم کارشناسی..." else "Rendering active force network...",
+                    subTasks = subtasks
+                )
+                kotlinx.coroutines.delay(150L)
 
                 // 8. Build Visual Graph using GraphEngine Layout
                 val graph = buildVisualGraph(trimmedAddress, counterparties)
                 _activeGraph.value = graph
                 _selectedNodeId.value = trimmedAddress
 
-                // Smooth Animated Analysis Loop for Ultimate Realism & Telemetry (Remix)
-                val totalSteps = 100
-                for (p in 12..totalSteps) {
-                    val progressFloat = p / 100f
+                subtasks = subtasks.map { if (it.id == "s9") it.copy(isCompleted = true, isCurrent = false) else it }
 
-                    // Micro-tasks subtask completions based on current percentage
-                    subtasks = subtasks.map { task ->
-                        when (task.id) {
-                            "s1" -> task.copy(isCompleted = p >= 20, isCurrent = p < 20)
-                            "s2" -> task.copy(isCompleted = p >= 35, isCurrent = p in 20..34)
-                            "s3" -> task.copy(isCompleted = p >= 50, isCurrent = p in 35..49)
-                            "s4" -> task.copy(isCompleted = p >= 65, isCurrent = p in 50..64)
-                            "s5" -> task.copy(isCompleted = p >= 75, isCurrent = p in 65..74)
-                            "s6" -> task.copy(isCompleted = p >= 85, isCurrent = p in 75..84)
-                            "s7" -> task.copy(isCompleted = p >= 92, isCurrent = p in 85..91)
-                            "s8" -> task.copy(isCompleted = p >= 97, isCurrent = p in 92..96)
-                            "s9" -> task.copy(isCompleted = p >= 100, isCurrent = p in 97..99)
-                            else -> task
-                        }
-                    }
-
-                    val title = when {
-                        p < 20 -> if (isPersian) "اعتبارسنجی فرمت آدرس و شبکه" else "Validating Address & Network"
-                        p < 35 -> if (isPersian) "بررسی آدرس در بلاکچین و واکشی مانده حساب" else "Initial Ledger Query"
-                        p < 50 -> if (isPersian) "واکشی و بازیابی تراکنش‌های تاریخی" else "Retrieving Transactions"
-                        p < 65 -> if (isPersian) "تفکیک جریان‌های ورودی/خروجی و ساتوشی" else "Normalizing Flows"
-                        p < 75 -> if (isPersian) "استخراج ماتریس طرف‌های مقابل" else "Mapping Counterparties"
-                        p < 85 -> if (isPersian) "تطبیق با الگوهای پولشویی و جرائم" else "Matching AML Patterns"
-                        p < 92 -> if (isPersian) "تحلیل شبانه‌روزی و زمانی-جغرافیایی" else "Temporal Profiling"
-                        p < 97 -> if (isPersian) "رده‌بندی رفتار ماهیتی آدرس" else "Classifying Entity"
-                        else -> if (isPersian) "تکمیل زنجیره ادله و ساخت گراف" else "Building Evidence Graph"
-                    }
-
-                    val stepDesc = when {
-                        p < 20 -> if (isPersian) "بررسی قالب آدرس و کدهای کنترلی..." else "Checking address checksum..."
-                        p < 35 -> if (isPersian) "دریافت اطلاعات تراکنش‌ها از نودهای بلاکچین..." else "Querying network RPC feeds..."
-                        p < 50 -> if (isPersian) "تجزیه تاریخی سوابق و جریان خروجی..." else "Parsing historical ledger logs..."
-                        p < 65 -> if (isPersian) "محاسبه ارزش ریالی و تفکیک جریان‌های ساتوشی..." else "Normalizing Satoshi amounts..."
-                        p < 75 -> if (isPersian) "تحلیل ساختار آدرس‌ها و خوشه‌بندی طرفین..." else "Generating counterparty list..."
-                        p < 85 -> if (isPersian) "ارزیابی الگوهای لایه‌بندی و پیل‌چین..." else "Running pattern heuristic rules..."
-                        p < 92 -> if (isPersian) "محاسبه همبستگی زمانی فعالیت روزانه..." else "Analyzing diurnal activity hours..."
-                        p < 97 -> if (isPersian) "تطبیق رفتار تراکنشی با ماهیت‌های شناخته‌شده..." else "Inferring entity behavior..."
-                        else -> if (isPersian) "ترسیم نهایی ارتباطات در بوم کارشناسی..." else "Rendering active force network..."
-                    }
-
-                    // Simulated real-time, fluctuated pings
-                    val nodePing = if (p % 10 == 0) (40L..70L).random() else (_progressState.value.resourceLeds.find { it.id == "node" }?.pingMs ?: 52L)
-                    val osintPing = if (p % 15 == 0) (110L..195L).random() else (_progressState.value.resourceLeds.find { it.id == "osint" }?.pingMs ?: 145L)
-                    val ratesPing = if (p % 12 == 0) (75L..115L).random() else (_progressState.value.resourceLeds.find { it.id == "rates" }?.pingMs ?: 92L)
-
-                    val activeLeds = listOf(
-                        com.aistudio.orbit.ui.components.ForensicResourceLed("node", "${network.displayName} RPC Node", "نود شبکه ${network.displayName}", isOnline = true, isConnected = true, pingMs = nodePing),
-                        com.aistudio.orbit.ui.components.ForensicResourceLed("room", "Room SQLite Cache DB", "پایگاه داده محلی Room", isOnline = false, isLocal = true, isConnected = true, pingMs = null),
-                        com.aistudio.orbit.ui.components.ForensicResourceLed("osint", "OSINT Threat Intel Hub", "هاب اطلاعات تهدیدات اوسینت", isOnline = true, isConnected = true, pingMs = osintPing),
-                        com.aistudio.orbit.ui.components.ForensicResourceLed("rates", "Historical Forex Rates", "مرجع تسعیر تاریخی ریال/دلار", isOnline = true, isConnected = true, pingMs = ratesPing)
-                    )
-
-                    // Granular counts animating up matching the progress
-                    val foundTx = (transactions.size * progressFloat).toInt()
-                    val foundCps = (counterparties.size * progressFloat).toInt()
-                    val foundRels = ((counterparties.size * 1.5) * progressFloat).toInt()
-
-                    // Simulated layer & sub-branch scanning progression based on searchDepth
-                    val layer = if (p < 50) 1 else if (p < 85) searchDepth.coerceAtMost(2) else searchDepth
-                    val subBranch = 1 + (p % 4)
-
-                    _progressState.value = _progressState.value.copy(
-                        progress = progressFloat,
-                        operationTitle = title,
-                        stepDescription = stepDesc,
-                        subTasks = subtasks,
-                        resourceLeds = activeLeds,
-                        foundTransactionsCount = foundTx,
-                        foundAddressesCount = foundCps,
-                        foundRelationsCount = foundRels,
-                        currentLayer = layer,
-                        currentSubBranch = subBranch
-                    )
-
-                    // Brief delay to make the process visual, alive, and beautifully smooth
-                    kotlinx.coroutines.delay(45L)
-                }
-
-                _progressState.value = _progressState.value.copy(progress = 1.0f, subTasks = subtasks)
 
                 val caseId = UUID.randomUUID().toString()
                 val finalRef = if (referenceNumber.isNotBlank()) referenceNumber else "CASE-${System.currentTimeMillis().toString().takeLast(6)}"

@@ -48,8 +48,6 @@ import com.aistudio.orbit.ui.theme.ForensicLightColorScheme
 import com.aistudio.orbit.ui.theme.ForensicSpacing
 import com.aistudio.orbit.ui.theme.ForensicTouchTarget
 
-import com.aistudio.orbit.util.SecureStorageManager
-
 class MainActivity : ComponentActivity() {
 
     private val investigationViewModel: InvestigationViewModel by viewModels()
@@ -58,7 +56,6 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        SecureStorageManager.init(applicationContext)
         com.aistudio.orbit.security.auth.AuthManager.ensureLocalOwnerSession()
 
         setContent {

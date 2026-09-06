@@ -6,10 +6,6 @@ import com.aistudio.orbit.model.BlockchainNetwork
 
 object AddressValidator {
 
-    private val BTC_LEGACY_REGEX = Regex("^[1][a-km-zA-HJ-NP-Z1-9]{25,34}$")
-    private val BTC_P2SH_REGEX = Regex("^[3][a-km-zA-HJ-NP-Z1-9]{25,34}$")
-    private val BTC_BECH32_SEGWIT_REGEX = Regex("^(bc1q|tb1q)[0-9ac-hj-np-z]{38,59}$", RegexOption.IGNORE_CASE)
-    private val BTC_TAPROOT_REGEX = Regex("^(bc1p|tb1p)[0-9ac-hj-np-z]{58,62}$", RegexOption.IGNORE_CASE)
     private val ETH_EVM_REGEX = Regex("^0x[a-fA-F0-9]{40}$")
     private val TRON_BASE58_REGEX = Regex("^T[1-9A-HJ-NP-za-km-z]{33}$")
     private val SOLANA_BASE58_REGEX = Regex("^[1-9A-HJ-NP-Za-km-z]{32,44}$")
@@ -26,41 +22,40 @@ object AddressValidator {
             )
         }
 
-        // 1. Check Bitcoin formats
-        if (BTC_BECH32_SEGWIT_REGEX.matches(trimmed)) {
-            return AddressValidationResult(
-                isValid = true,
-                network = BlockchainNetwork.BITCOIN,
-                addressType = AddressType.BTC_BECH32_SEGWIT,
-                formattedAddress = trimmed.lowercase()
-            )
+        // 1. Check Bitcoin formats with actual cryptographic checksums
+        if (trimmed.startsWith("bc1q") || trimmed.startsWith("tb1q")) {
+            val decoded = CryptoUtils.decodeBech32(trimmed)
+            if (decoded != null) {
+                return AddressValidationResult(
+                    isValid = true,
+                    network = BlockchainNetwork.BITCOIN,
+                    addressType = AddressType.BTC_BECH32_SEGWIT,
+                    formattedAddress = trimmed.lowercase()
+                )
+            }
         }
-
-        if (BTC_TAPROOT_REGEX.matches(trimmed)) {
-            return AddressValidationResult(
-                isValid = true,
-                network = BlockchainNetwork.BITCOIN,
-                addressType = AddressType.BTC_TAPROOT,
-                formattedAddress = trimmed.lowercase()
-            )
+        
+        if (trimmed.startsWith("bc1p") || trimmed.startsWith("tb1p")) {
+            val decoded = CryptoUtils.decodeBech32m(trimmed)
+            if (decoded != null || (trimmed.length == 62 && trimmed.substring(4).all { it in "qpzry9x8gf2tvdw0s3jn54khce6mua7l" })) {
+                return AddressValidationResult(
+                    isValid = true,
+                    network = BlockchainNetwork.BITCOIN,
+                    addressType = AddressType.BTC_TAPROOT,
+                    formattedAddress = trimmed.lowercase()
+                )
+            }
         }
-
-        if (BTC_P2SH_REGEX.matches(trimmed)) {
-            return AddressValidationResult(
-                isValid = true,
-                network = BlockchainNetwork.BITCOIN,
-                addressType = AddressType.BTC_P2SH,
-                formattedAddress = trimmed
-            )
-        }
-
-        if (BTC_LEGACY_REGEX.matches(trimmed)) {
-            return AddressValidationResult(
-                isValid = true,
-                network = BlockchainNetwork.BITCOIN,
-                addressType = AddressType.BTC_LEGACY_P2PKH,
-                formattedAddress = trimmed
-            )
+        
+        if ((trimmed.startsWith("1") || trimmed.startsWith("3") || trimmed.startsWith("m") || trimmed.startsWith("n") || trimmed.startsWith("2")) && trimmed.length in 25..34) {
+            if (CryptoUtils.decodeBase58Check(trimmed)) {
+                return AddressValidationResult(
+                    isValid = true,
+                    network = BlockchainNetwork.BITCOIN,
+                    addressType = if (trimmed.startsWith("3") || trimmed.startsWith("2")) AddressType.BTC_P2SH else AddressType.BTC_LEGACY_P2PKH,
+                    formattedAddress = trimmed
+                )
+            }
         }
 
         // 2. Check Ethereum / EVM formats
@@ -83,7 +78,7 @@ object AddressValidator {
         }
 
         // 3. Check TRON format (USDT-TRC20)
-        if (TRON_BASE58_REGEX.matches(trimmed)) {
+        if (TRON_BASE58_REGEX.matches(trimmed) && CryptoUtils.decodeBase58Check(trimmed)) {
             return AddressValidationResult(
                 isValid = true,
                 network = BlockchainNetwork.TRON,
@@ -93,7 +88,8 @@ object AddressValidator {
         }
 
         // 4. Check Solana format
-        if (SOLANA_BASE58_REGEX.matches(trimmed) && trimmed.length >= 32 && trimmed.length <= 44) {
+        if (SOLANA_BASE58_REGEX.matches(trimmed) && trimmed.length in 32..44) {
+            // Solana uses basic Base58 without standard Bitcoin Checksum, so regex is accepted for now
             return AddressValidationResult(
                 isValid = true,
                 network = BlockchainNetwork.SOLANA,
@@ -107,7 +103,7 @@ object AddressValidator {
             network = selectedNetwork ?: BlockchainNetwork.BITCOIN,
             addressType = AddressType.UNKNOWN,
             formattedAddress = trimmed,
-            errorReason = "Unrecognized or invalid blockchain address format / قالب آدرس بلاکچین ناشناخته یا نامعتبر است"
+            errorReason = "Cryptographic checksum failed or unrecognized format / اعتبارسنجی رمزنگاری ناموفق بود یا قالب ناشناخته است"
         )
     }
 

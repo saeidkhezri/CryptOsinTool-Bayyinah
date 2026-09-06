@@ -18,6 +18,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -315,43 +316,119 @@ fun OsintInvestigationView(
                     }
                 }
 
-                // Workspace Navigation - Modern Chip System (Segmented Control replacement)
+                // 8-Stage Forensic OSINT Horizontal Tab Bar
                 item {
-                    val tabs = listOf(
-                        Triple(0, if (isFa) "سرنخ‌ها" else "Seeds", Icons.Default.Input),
-                        Triple(1, if (isFa) "موجودیت‌ها" else "Entities", Icons.Default.AssignmentInd),
-                        Triple(2, if (isFa) "گراف" else "Graph", Icons.Default.AccountTree),
-                        Triple(3, if (isFa) "فرضیات" else "Hypotheses", Icons.Default.Psychology),
-                        Triple(4, if (isFa) "رتبه‌بندی" else "Ranking", Icons.Default.Lightbulb),
-                        Triple(5, if (isFa) "سرویس‌ها" else "Providers", Icons.Default.Extension),
-                        Triple(6, if (isFa) "ادله" else "Evidence", Icons.Default.VerifiedUser),
-                        Triple(7, if (isFa) "هوش مصنوعی" else "AI Co-Pilot", Icons.Default.AutoAwesome)
+                    val stageTabs = listOf(
+                        Triple(0, if (isFa) "۱. سرنخ‌ها و ورودی‌ها" else "1. Seeds & Pipeline", Icons.Default.Input),
+                        Triple(1, if (isFa) "۲. موجودیت‌ها و کنترل" else "2. Entities & Control", Icons.Default.AssignmentInd),
+                        Triple(2, if (isFa) "۳. گراف همبستگی" else "3. Correlation Graph", Icons.Default.AccountTree),
+                        Triple(3, if (isFa) "۴. فرضیات و تعارضات" else "4. Hypotheses & Conflicts", Icons.Default.Psychology),
+                        Triple(4, if (isFa) "۵. سرنخ‌های رتبه‌بندی" else "5. Ranked Leads", Icons.Default.Lightbulb),
+                        Triple(5, if (isFa) "۶. ارائه‌دهندگان OSINT" else "6. Source Providers", Icons.Default.Extension),
+                        Triple(6, if (isFa) "۷. زنجیره ادله و ممیزی" else "7. Evidence Ledger", Icons.Default.VerifiedUser),
+                        Triple(7, if (isFa) "۸. دستیار هوش مصنوعی" else "8. AI Co-Pilot", Icons.Default.AutoAwesome)
                     )
 
-                    LazyRow(
+                    Surface(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(vertical = 4.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        contentPadding = PaddingValues(horizontal = 4.dp)
+                        shape = RoundedCornerShape(14.dp),
+                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        border = androidx.compose.foundation.BorderStroke(
+                            1.dp,
+                            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
+                        ),
+                        tonalElevation = 2.dp
                     ) {
-                        items(tabs) { (idx, title, icon) ->
-                            FilterChip(
-                                selected = activeTab == idx,
-                                onClick = { activeTab = idx },
-                                label = {
-                                    Text(text = title, style = MaterialTheme.typography.labelSmall)
-                                },
-                                leadingIcon = {
-                                    Icon(icon, contentDescription = null, modifier = Modifier.size(16.dp))
-                                },
-                                shape = RoundedCornerShape(12.dp),
-                                colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                                    selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                                    selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimaryContainer
-                                )
-                            )
+                        ScrollableTabRow(
+                            selectedTabIndex = activeTab,
+                            edgePadding = 8.dp,
+                            containerColor = Color.Transparent,
+                            contentColor = MaterialTheme.colorScheme.primary,
+                            indicator = { tabPositions ->
+                                if (activeTab < tabPositions.size) {
+                                    TabRowDefaults.SecondaryIndicator(
+                                        modifier = Modifier.tabIndicatorOffset(tabPositions[activeTab]),
+                                        height = 3.dp,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            },
+                            divider = {}
+                        ) {
+                            stageTabs.forEach { (idx, title, icon) ->
+                                val isSelected = activeTab == idx
+                                val count = when (idx) {
+                                    0 -> if (osintSeeds.isNotEmpty()) osintSeeds.size else null
+                                    1 -> if ((osintSession?.extractedEntities?.size ?: 0) > 0) osintSession?.extractedEntities?.size else null
+                                    3 -> if ((osintSession?.hypotheses?.size ?: 0) > 0) osintSession?.hypotheses?.size else null
+                                    5 -> if (pluggableProviders.isNotEmpty()) pluggableProviders.size else null
+                                    6 -> if ((osintSession?.collectedEvidence?.size ?: 0) > 0) osintSession?.collectedEvidence?.size else null
+                                    else -> null
+                                }
+
+                                Tab(
+                                    selected = isSelected,
+                                    onClick = { activeTab = idx },
+                                    modifier = Modifier
+                                        .heightIn(min = 48.dp)
+                                        .padding(horizontal = 2.dp, vertical = 4.dp),
+                                    selectedContentColor = MaterialTheme.colorScheme.primary,
+                                    unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(10.dp))
+                                            .background(
+                                                if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                                                else Color.Transparent
+                                            )
+                                            .padding(horizontal = 12.dp, vertical = 8.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = icon,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(17.dp),
+                                            tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+
+                                        Text(
+                                            text = title,
+                                            style = MaterialTheme.typography.labelMedium.copy(
+                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                            ),
+                                            maxLines = 1,
+                                            softWrap = false
+                                        )
+
+                                        if (count != null) {
+                                            Surface(
+                                                shape = RoundedCornerShape(8.dp),
+                                                color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+                                                modifier = Modifier.height(18.dp).padding(start = 2.dp)
+                                            ) {
+                                                Box(
+                                                    contentAlignment = Alignment.Center,
+                                                    modifier = Modifier.padding(horizontal = 5.dp)
+                                                ) {
+                                                    Text(
+                                                        text = if (isFa) count.toString().toPersianDigits() else count.toString(),
+                                                        style = MaterialTheme.typography.labelSmall.copy(
+                                                            fontSize = 10.sp,
+                                                            fontWeight = FontWeight.SemiBold,
+                                                            color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+                                                        )
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                 }

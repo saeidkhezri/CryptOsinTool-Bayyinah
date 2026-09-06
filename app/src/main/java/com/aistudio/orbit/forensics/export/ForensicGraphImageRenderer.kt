@@ -209,14 +209,28 @@ object ForensicGraphImageRenderer {
             paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
             paint.textAlign = Paint.Align.CENTER
             val symbolChar = when (node.entityCategory) {
-                ForensicEntityCategory.CRYPTO_WALLET -> if (node.isTarget) "★" else "₿"
-                ForensicEntityCategory.EXCHANGE_HOT_WALLET -> "🏦"
+                ForensicEntityCategory.CRYPTO_WALLET, ForensicEntityCategory.BLOCKCHAIN_ADDRESS -> {
+                    if (node.isTarget) "★" else when (node.network) {
+                        com.aistudio.orbit.model.BlockchainNetwork.ETHEREUM -> "Ξ"
+                        com.aistudio.orbit.model.BlockchainNetwork.TETHER_USDT -> "₮"
+                        com.aistudio.orbit.model.BlockchainNetwork.BNB_CHAIN -> "BNB"
+                        com.aistudio.orbit.model.BlockchainNetwork.POLYGON -> "POL"
+                        com.aistudio.orbit.model.BlockchainNetwork.TRON -> "TRX"
+                        com.aistudio.orbit.model.BlockchainNetwork.SOLANA -> "◎"
+                        else -> "₿"
+                    }
+                }
+                ForensicEntityCategory.EXCHANGE_HOT_WALLET, ForensicEntityCategory.EXCHANGE -> "🏦"
                 ForensicEntityCategory.MIXER_OR_TUMBLER -> "⚡"
+                ForensicEntityCategory.SMART_CONTRACT, ForensicEntityCategory.CONTRACT -> "⚙"
                 ForensicEntityCategory.PHONE_NUMBER, ForensicEntityCategory.PUBLIC_PHONE -> "☎"
                 ForensicEntityCategory.EMAIL_ADDRESS, ForensicEntityCategory.PUBLIC_EMAIL -> "✉"
                 ForensicEntityCategory.IP_NETWORK_NODE, ForensicEntityCategory.PUBLIC_IP -> "🌐"
-                ForensicEntityCategory.SOCIAL_ACCOUNT, ForensicEntityCategory.ALIAS_USERNAME -> "👤"
+                ForensicEntityCategory.SOCIAL_ACCOUNT, ForensicEntityCategory.ALIAS_USERNAME, ForensicEntityCategory.PUBLIC_PROFILE, ForensicEntityCategory.PUBLIC_USERNAME -> "👤"
                 ForensicEntityCategory.DOMAIN_NAME, ForensicEntityCategory.DOMAIN, ForensicEntityCategory.ENS -> "🔗"
+                ForensicEntityCategory.MINING_POOL -> "⛏"
+                ForensicEntityCategory.TOKEN -> "🪙"
+                ForensicEntityCategory.CLUSTER -> "❖"
                 else -> "●"
             }
             canvas.drawText(symbolChar, nx, ny + 4f, paint)

@@ -941,6 +941,32 @@ fun SettingsScaffold(
                             val freed = viewModel.databaseManager.clearCache()
                             val mb = freed / (1024 * 1024)
                             Toast.makeText(context, if (isFa) "حافظه موقت پاکسازی شد ($mb مگابایت آزاد شد)" else "Cache cleared ($mb MB freed)", Toast.LENGTH_SHORT).show()
+                        },
+                        onExportDatabase = { id ->
+                            coroutineScope.launch {
+                                val file = viewModel.databaseManager.exportDatasetToPortableJson(id)
+                                if (file != null) {
+                                    Toast.makeText(context, if (isFa) "دیتابیس با موفقیت صادر شد: ${file.name}" else "Dataset exported successfully: ${file.name}", Toast.LENGTH_LONG).show()
+                                } else {
+                                    Toast.makeText(context, if (isFa) "خطا در صدور فایل قابل‌انتقال دیتابیس" else "Failed to export portable dataset file", Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        },
+                        onImportDatabase = { jsonContent ->
+                            coroutineScope.launch {
+                                try {
+                                    val tempFile = File(context.cacheDir, "temp_import_${System.currentTimeMillis()}.json")
+                                    tempFile.writeText(jsonContent)
+                                    val success = viewModel.databaseManager.importPortableDataset(tempFile)
+                                    if (success) {
+                                        Toast.makeText(context, if (isFa) "دیتابیس قابل‌حمل با موفقیت وارد و در پایگاه محلی ایندکس شد." else "Portable dataset imported and indexed successfully into local DB.", Toast.LENGTH_LONG).show()
+                                    } else {
+                                        Toast.makeText(context, if (isFa) "خطا در اعتبارسنجی یا ذخیره‌سازی داده‌های واردشده" else "Failed to validate or persist imported dataset", Toast.LENGTH_SHORT).show()
+                                    }
+                                } catch (e: Exception) {
+                                    Toast.makeText(context, if (isFa) "خطا در پردازش فایل: ${e.message}" else "Import error: ${e.message}", Toast.LENGTH_SHORT).show()
+                                }
+                            }
                         }
                     )
                 }
@@ -2237,8 +2263,65 @@ fun DatabasesTab(
     onVerifyIntegrity: (String) -> Unit,
     onToggleDbEnabled: (String, Boolean) -> Unit,
     onUninstallDb: (String) -> Unit,
-    onClearCache: () -> Unit
+    onClearCache: () -> Unit,
+    onExportDatabase: (String) -> Unit = {},
+    onImportDatabase: (String) -> Unit = {}
 ) {
+    var showImportDialog by remember { mutableStateOf(false) }
+    var importJsonContent by remember { mutableStateOf("") }
+
+    if (showImportDialog) {
+        AlertDialog(
+            onDismissRequest = { showImportDialog = false },
+            icon = { Icon(Icons.Default.FileDownload, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+            title = {
+                Text(
+                    text = if (isPersian) "ورود دیتابیس فارنزیک قابل‌حمل (Cross-Device Import)"
+                    else "Import Portable Forensic Dataset",
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = if (isPersian) "محتوای JSON استخراج‌شده از نسخه دیگر بیّنه را در کادر زیر قرار دهید. دیتابیس به صورت خودکار اعتبارسنجی، ایندکس و در حافظه محلی ذخیره خواهد شد."
+                        else "Paste the exported JSON content from another Bayyinah workstation. The dataset will be validated, indexed, and stored in local memory.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    OutlinedTextField(
+                        value = importJsonContent,
+                        onValueChange = { importJsonContent = it },
+                        label = { Text(if (isPersian) "محتوای JSON دیتابیس" else "Dataset JSON Content") },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(180.dp),
+                        textStyle = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace)
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (importJsonContent.isNotBlank()) {
+                            onImportDatabase(importJsonContent)
+                            showImportDialog = false
+                            importJsonContent = ""
+                        }
+                    },
+                    enabled = importJsonContent.isNotBlank()
+                ) {
+                    Text(if (isPersian) "تایید و ورود به دیتابیس" else "Validate & Import")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showImportDialog = false }) {
+                    Text(if (isPersian) "انصراف" else "Cancel")
+                }
+            }
+        )
+    }
+
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(14.dp)
@@ -2267,13 +2350,23 @@ fun DatabasesTab(
                                 fontWeight = FontWeight.Bold
                             )
                         }
-                        OutlinedButton(
-                            onClick = onClearCache,
-                            shape = RoundedCornerShape(8.dp)
-                        ) {
-                            Icon(Icons.Default.CleaningServices, contentDescription = null, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(if (isPersian) "پاکسازی کش" else "Clear Cache", fontSize = 12.sp)
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            FilledTonalButton(
+                                onClick = { showImportDialog = true },
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Icon(Icons.Default.FileDownload, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(if (isPersian) "ورود دیتابیس (Import)" else "Import DB", fontSize = 12.sp)
+                            }
+                            OutlinedButton(
+                                onClick = onClearCache,
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Icon(Icons.Default.CleaningServices, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(if (isPersian) "پاکسازی کش" else "Clear Cache", fontSize = 12.sp)
+                            }
                         }
                     }
 
@@ -2356,12 +2449,14 @@ fun DatabasesTab(
                 onRebuildIndex = { onRebuildIndex(db.id) },
                 onVerify = { onVerifyIntegrity(db.id) },
                 onToggleEnabled = { onToggleDbEnabled(db.id, it) },
-                onUninstall = { onUninstallDb(db.id) }
+                onUninstall = { onUninstallDb(db.id) },
+                onExport = { onExportDatabase(db.id) }
             )
         }
     }
 }
 
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 fun DatabaseCatalogCard(
     isPersian: Boolean,
@@ -2371,8 +2466,31 @@ fun DatabaseCatalogCard(
     onRebuildIndex: () -> Unit,
     onVerify: () -> Unit,
     onToggleEnabled: (Boolean) -> Unit,
-    onUninstall: () -> Unit
+    onUninstall: () -> Unit,
+    onExport: () -> Unit = {}
 ) {
+    var isExpandedDetails by remember { mutableStateOf(false) }
+
+    val stageTextFa = when (db.investigationStage) {
+        "DISCOVER" -> "مرحله ۲: کشف سرنخ و توکن‌ها"
+        "ANALYZE" -> "مرحله ۳: تحلیل تراکنش و کلاسترها"
+        "CONNECT" -> "مرحله ۴: ارتباطات، استخرها و میکسر"
+        "SANCTIONS" -> "مرحله ۵: تطبیق تحریم‌های بین‌المللی"
+        "OSINT" -> "مرحله ۶: اطلاعات متن‌باز و نشت هویت"
+        "RISK" -> "مرحله ۷: ماتریس ریسک و ادله"
+        else -> "مرحله تحقیق: ${db.investigationStage}"
+    }
+
+    val stageTextEn = when (db.investigationStage) {
+        "DISCOVER" -> "Stage 2: Lead Discovery & Tokens"
+        "ANALYZE" -> "Stage 3: Tx & Cluster Analysis"
+        "CONNECT" -> "Stage 4: Relationships & Anonymity Pools"
+        "SANCTIONS" -> "Stage 5: International Sanctions Screening"
+        "OSINT" -> "Stage 6: OSINT & Leaked Credentials"
+        "RISK" -> "Stage 7: Risk Matrix & Evidence"
+        else -> "Investigation Stage: ${db.investigationStage}"
+    }
+
     Card(
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
@@ -2397,6 +2515,46 @@ fun DatabaseCatalogCard(
                 }
                 if (db.isInstalled) {
                     Switch(checked = db.isEnabled, onCheckedChange = onToggleEnabled, modifier = Modifier.scale(0.8f))
+                }
+            }
+
+            // Investigation Stage and Hybrid Mode Badges
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(6.dp),
+                    color = MaterialTheme.colorScheme.primaryContainer
+                ) {
+                    Text(
+                        text = if (isPersian) stageTextFa else stageTextEn,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                    )
+                }
+
+                if (db.onlineEndpoint.isNotBlank()) {
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = MaterialTheme.colorScheme.secondaryContainer
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                        ) {
+                            Icon(Icons.Default.SyncAlt, contentDescription = null, modifier = Modifier.size(12.dp), tint = MaterialTheme.colorScheme.onSecondaryContainer)
+                            Text(
+                                text = if (isPersian) "حالت دوگانه (آفلاین + API آنلاین)" else "Hybrid (Offline + Online API)",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
                 }
             }
 
@@ -2430,6 +2588,60 @@ fun DatabaseCatalogCard(
                 Column(modifier = Modifier.weight(0.8f)) {
                     Text(if (isPersian) "نسخه" else "Version", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Text(db.version, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold, maxLines = 1)
+                }
+            }
+
+            // Expandable details for verified forensic link & SHA-256
+            AnimatedVisibility(visible = isExpandedDetails) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                        .padding(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        text = if (isPersian) "لینک مستقیم دانلود واقعی:" else "Direct Authentic Download URL:",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = db.downloadUrl,
+                        style = MaterialTheme.typography.bodySmall,
+                        fontFamily = FontFamily.Monospace,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontSize = 10.sp
+                    )
+
+                    if (db.onlineEndpoint.isNotBlank()) {
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = if (isPersian) "اندپوینت استعلام برخط API:" else "Online Query API Endpoint:",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = db.onlineEndpoint,
+                            style = MaterialTheme.typography.bodySmall,
+                            fontFamily = FontFamily.Monospace,
+                            color = MaterialTheme.colorScheme.secondary,
+                            fontSize = 10.sp
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = if (isPersian) "کد اعتبارسنجی SHA-256:" else "Integrity SHA-256:",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = db.integritySha256,
+                        style = MaterialTheme.typography.bodySmall,
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 9.sp
+                    )
                 }
             }
 
@@ -2502,17 +2714,28 @@ fun DatabaseCatalogCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Surface(
-                    shape = RoundedCornerShape(4.dp),
-                    color = if (db.isInstalled) if (MaterialTheme.colorScheme.background.luminance() < 0.5f) Color(0xFF4ADE80) else Color(0xFF1B5E20) else MaterialTheme.colorScheme.surfaceContainerHighest
-                ) {
-                    Text(
-                        text = if (db.isInstalled) (if (isPersian) "نصب و فعال" else "Installed") else (if (isPersian) "آماده دانلود" else "Available"),
-                        color = if (db.isInstalled) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
-                        style = MaterialTheme.typography.labelSmall,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                        fontWeight = FontWeight.Bold
-                    )
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Surface(
+                        shape = RoundedCornerShape(4.dp),
+                        color = if (db.isInstalled) if (MaterialTheme.colorScheme.background.luminance() < 0.5f) Color(0xFF4ADE80) else Color(0xFF1B5E20) else MaterialTheme.colorScheme.surfaceContainerHighest
+                    ) {
+                        Text(
+                            text = if (db.isInstalled) (if (isPersian) "نصب و فعال" else "Installed") else (if (isPersian) "آماده دانلود" else "Available"),
+                            color = if (db.isInstalled) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.labelSmall,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    IconButton(onClick = { isExpandedDetails = !isExpandedDetails }) {
+                        Icon(
+                            if (isExpandedDetails) Icons.Default.Info else Icons.Default.Info,
+                            contentDescription = "Details",
+                            tint = if (isExpandedDetails) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
                 }
 
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -2528,12 +2751,21 @@ fun DatabaseCatalogCard(
                         }
                     } else {
                         FilledTonalButton(
+                            onClick = onExport,
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Icon(Icons.Default.FileUpload, contentDescription = null, modifier = Modifier.size(14.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(if (isPersian) "استخراج" else "Export", fontSize = 11.sp)
+                        }
+
+                        FilledTonalButton(
                             onClick = onRebuildIndex,
                             shape = RoundedCornerShape(8.dp)
                         ) {
                             Icon(Icons.Default.Build, contentDescription = null, modifier = Modifier.size(14.dp))
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text(if (isPersian) "بازسازی ایندکس" else "Re-index", fontSize = 11.sp)
+                            Text(if (isPersian) "ایندکس" else "Re-index", fontSize = 11.sp)
                         }
 
                         OutlinedButton(

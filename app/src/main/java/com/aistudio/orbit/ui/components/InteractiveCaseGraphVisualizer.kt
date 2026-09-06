@@ -362,6 +362,7 @@ fun InteractiveCaseGraphVisualizer(
                     cy = screenY,
                     radius = r,
                     category = node.entityCategory,
+                    network = node.network,
                     scale = scale
                 )
 
@@ -1117,11 +1118,22 @@ private fun DrawScope.drawEntityGlyph(
     cy: Float,
     radius: Float,
     category: ForensicEntityCategory,
+    network: BlockchainNetwork = BlockchainNetwork.BITCOIN,
     scale: Float
 ) {
     if (radius < 8f) return
     val glyph = when (category) {
-        ForensicEntityCategory.CRYPTO_WALLET, ForensicEntityCategory.BLOCKCHAIN_ADDRESS -> "₿"
+        ForensicEntityCategory.CRYPTO_WALLET, ForensicEntityCategory.BLOCKCHAIN_ADDRESS -> {
+            when (network) {
+                BlockchainNetwork.ETHEREUM -> "Ξ"
+                BlockchainNetwork.TETHER_USDT -> "₮"
+                BlockchainNetwork.BNB_CHAIN -> "BNB"
+                BlockchainNetwork.POLYGON -> "POL"
+                BlockchainNetwork.TRON -> "TRX"
+                BlockchainNetwork.SOLANA -> "◎"
+                else -> "₿"
+            }
+        }
         ForensicEntityCategory.EXCHANGE_HOT_WALLET, ForensicEntityCategory.EXCHANGE -> "🏦"
         ForensicEntityCategory.MIXER_OR_TUMBLER -> "⚡"
         ForensicEntityCategory.SMART_CONTRACT, ForensicEntityCategory.CONTRACT -> "⚙"

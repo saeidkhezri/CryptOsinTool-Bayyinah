@@ -181,52 +181,88 @@ fun DashboardView(
 
                         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
 
-                        // Quick Actions
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(ForensicSpacing.sm)
-                        ) {
-                            Button(
-                                onClick = onNavigateToNew,
-                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                                shape = ForensicShapes.md,
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .heightIn(min = ForensicTouchTarget.minSize)
+                                                // Quick Actions
+                        if (widthClass == WindowWidthSizeClass.COMPACT) {
+                            Column(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalArrangement = Arrangement.spacedBy(ForensicSpacing.sm)
                             ) {
-                                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-                                Spacer(modifier = Modifier.width(ForensicSpacing.xs))
-                                Text(
-                                    text = strings.tabNewInvestigation,
-                                    fontWeight = FontWeight.Bold,
-                                    style = MaterialTheme.typography.labelLarge,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Clip
-                                )
+                                Button(
+                                    onClick = onNavigateToNew,
+                                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                                    shape = ForensicShapes.md,
+                                    modifier = Modifier.fillMaxWidth().heightIn(min = ForensicTouchTarget.minSize)
+                                ) {
+                                    Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    Spacer(modifier = Modifier.width(ForensicSpacing.xs))
+                                    Text(
+                                        text = strings.tabNewInvestigation,
+                                        fontWeight = FontWeight.Bold,
+                                        style = MaterialTheme.typography.labelLarge,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                                Button(
+                                    onClick = onNavigateToOsint,
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = Color(0xFF795548), // Earthy Brown/Bronze
+                                        contentColor = Color.White
+                                    ),
+                                    shape = ForensicShapes.md,
+                                    modifier = Modifier.fillMaxWidth().heightIn(min = ForensicTouchTarget.minSize)
+                                ) {
+                                    Icon(Icons.Default.TravelExplore, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    Spacer(modifier = Modifier.width(ForensicSpacing.xs))
+                                    Text(
+                                        text = if (isPersian) "سامانه OSINT" else "OSINT Hub",
+                                        fontWeight = FontWeight.Bold,
+                                        style = MaterialTheme.typography.labelLarge,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
                             }
-
-                            Button(
-                                onClick = onNavigateToOsint,
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = Color(0xFF795548), // Earthy Brown/Bronze
-                                    contentColor = Color.White
-                                ),
-                                shape = ForensicShapes.md,
-                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .heightIn(min = ForensicTouchTarget.minSize)
+                        } else {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(ForensicSpacing.sm)
                             ) {
-                                Icon(Icons.Default.TravelExplore, contentDescription = null, modifier = Modifier.size(18.dp))
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(
-                                    text = if (isPersian) "سامانه OSINT" else "OSINT Hub",
-                                    fontWeight = FontWeight.Bold,
-                                    style = MaterialTheme.typography.labelMedium,
-                                    maxLines = 1,
-                                    softWrap = false,
-                                    overflow = TextOverflow.Visible
-                                )
+                                Button(
+                                    onClick = onNavigateToNew,
+                                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                                    shape = ForensicShapes.md,
+                                    modifier = Modifier.weight(1f).heightIn(min = ForensicTouchTarget.minSize)
+                                ) {
+                                    Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    Spacer(modifier = Modifier.width(ForensicSpacing.xs))
+                                    Text(
+                                        text = strings.tabNewInvestigation,
+                                        fontWeight = FontWeight.Bold,
+                                        style = MaterialTheme.typography.labelLarge,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                                Button(
+                                    onClick = onNavigateToOsint,
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = Color(0xFF795548), // Earthy Brown/Bronze
+                                        contentColor = Color.White
+                                    ),
+                                    shape = ForensicShapes.md,
+                                    modifier = Modifier.weight(1f).heightIn(min = ForensicTouchTarget.minSize)
+                                ) {
+                                    Icon(Icons.Default.TravelExplore, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    Spacer(modifier = Modifier.width(ForensicSpacing.xs))
+                                    Text(
+                                        text = if (isPersian) "سامانه OSINT" else "OSINT Hub",
+                                        fontWeight = FontWeight.Bold,
+                                        style = MaterialTheme.typography.labelLarge,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
                             }
                         }
                     }
@@ -443,7 +479,7 @@ fun DashboardView(
                                         )
                                     }
 
-                                    Column(horizontalAlignment = Alignment.End, modifier = Modifier.weight(1f)) {
+                                                                        Column(horizontalAlignment = Alignment.End, modifier = Modifier.weight(1f)) {
                                         Text(
                                             text = if (isPersian) "پیشنهاد اقدام بعدی:" else "Recommended Next Best Action:",
                                             style = MaterialTheme.typography.labelSmall,
@@ -454,7 +490,9 @@ fun DashboardView(
                                             style = MaterialTheme.typography.bodySmall,
                                             fontWeight = FontWeight.Bold,
                                             color = Color(0xFFFFD54F), // Gold Accent
-                                            textAlign = TextAlign.End
+                                            textAlign = TextAlign.End,
+                                            maxLines = 2,
+                                            overflow = TextOverflow.Ellipsis
                                         )
                                     }
                                 }
@@ -470,8 +508,11 @@ fun DashboardView(
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(
                                     text = if (isPersian) "ورود به نقشه راه هدایت‌شده پرونده" else "Enter Guided Case Roadmap",
-                                    fontWeight = FontWeight.Bold
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
                                 )
+
                             }
                         }
                     }

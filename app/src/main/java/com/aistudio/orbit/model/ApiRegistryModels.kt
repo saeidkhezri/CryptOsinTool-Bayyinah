@@ -194,6 +194,8 @@ data class ForensicDatabaseInfo(
     val isInstalled: Boolean = false,
     val isEnabled: Boolean = true,
     val downloadUrl: String = "",
+    val onlineEndpoint: String = "",
+    val investigationStage: String = "ALL", // DISCOVER, ANALYZE, CONNECT, OSINT, RISK, EVIDENCE
     val downloadProgress: Float = 0.0f,
     val downloadSpeedMbS: Float = 0.0f,
     val downloadedBytes: Long = 0,
